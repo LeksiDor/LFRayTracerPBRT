@@ -11,7 +11,9 @@ namespace lfrt
 {
 
 
-class ImageInterface;
+class SampleGenerator;
+class SampleTile;
+class SampleAccumulator;
 class LFRayTracer;
 class RayGenerator;
 
@@ -24,17 +26,37 @@ struct VEC2 { Real x; Real y; };
 struct VEC3 { Real x; Real y; Real z; };
 
 
-class ImageInterface
+
+// Generates sequence of samples for each pixel.
+// Should be called sequentially for each pixel.
+// If another pixel is set, it should reset itself.
+// Is not thread-safe.
+// For multi-threading, SampleGenerator should be cloned for each thread.
+class SampleGenerator
 {
 public:
-    virtual ~ImageInterface() = default;
-	virtual bool SetSize( const Int& width, const Int& y ) = 0;
-    virtual bool GetSize( Int& x, Int& y ) const = 0;
-	virtual bool SetColor( const Int& x, const Int& y, const Real& r, const Real& g, const Real& b ) = 0;
-	virtual bool GetColor( const Int& x, const Int& y, Real& r, Real& g, Real& b ) const = 0;
-	virtual bool Save( const std::string& filepath ) const = 0;
-	virtual bool Load( const std::string& filepath ) = 0;
-	virtual bool Copy( ImageInterface& dst ) const = 0;
+    virtual ~SampleGenerator() = default;
+	virtual SampleGenerator* Clone() const = 0;
+    virtual bool ResetPixel( const Int& x, const Int& y ) = 0;
+	virtual bool NextSample( Real& weight, VEC2& raster, VEC2& secondary, Real& time ) = 0;
+};
+
+
+// Container for all accumulated samples within a local rectangular pixel area.
+// May use memory allocated by SampleAccumulator.
+// Should be created and destroyed by SampleAccumulator.
+// Should be used inside one thread.
+class SampleTile
+{
+public:
+	virtual ~SampleTile() = default;
+	virtual bool AddSample(
+		const VEC2& raster,
+		const VEC2& secondary,
+		const Real& sampleWeight,
+		const Real& rayWeight,
+		const Real& r, const Real& g, const Real& b
+	) = 0;
 };
 
 
@@ -42,13 +64,12 @@ class SampleAccumulator
 {
 public:
 	virtual ~SampleAccumulator() = default;
-	virtual bool AddSample(
-		ImageInterface& image,
-		const VEC2& raster,
-		const VEC2& secondary,
-		const Real& weight,
-		const Real& r, const Real& g, const Real& b
-		) = 0;
+	virtual bool SetSize( const Int& width, const Int& y ) = 0;
+    virtual bool GetSize( Int& x, Int& y ) const = 0;
+	virtual SampleTile* CreateSampleTile( const Int& startX, const Int& startY, const Int& sizeX, const Int& sizeY ) = 0;
+    virtual bool MergeSampleTile(SampleTile* tile) = 0;
+	virtual bool DestroySampleTile( SampleTile* tile ) = 0;
+	virtual bool GetColor( const Int& x, const Int& y, Real& r, Real& g, Real& b ) = 0;
 };
 
 
@@ -122,8 +143,9 @@ public:
 	virtual ~LFRayTracer() = default;
 	virtual bool LoadScene( const std::string& filepath ) = 0;
 	virtual RayGenerator* CreateDefaultRayGenerator( const Int& width, const Int& height ) const = 0;
+	virtual SampleGenerator* CreateDefaultSampleGenerator( const Int& widht, const Int& height ) const = 0;
 	virtual SampleAccumulator* CreateDefaultSampleAccumulator( const Int& width, const Int& height ) const = 0;
-	virtual bool Render( ImageInterface& image, const RayGenerator& raygen, const SampleAccumulator& sampleaccum ) const = 0;
+	virtual bool Render( RayGenerator& raygen, SampleGenerator& sampleGen, SampleAccumulator& sampleAccum ) = 0;
 };
 
 
