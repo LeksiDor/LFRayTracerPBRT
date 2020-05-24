@@ -526,6 +526,14 @@ SET_TARGET_PROPERTIES ( pbrt_exe PROPERTIES OUTPUT_NAME pbrt )
 TARGET_COMPILE_FEATURES ( pbrt_exe PRIVATE ${PBRT_CXX11_FEATURES} )
 TARGET_LINK_LIBRARIES ( pbrt_exe ${ALL_PBRT_LIBS} )
 
+# LFRayTracer usage example.
+ADD_EXECUTABLE ( ExampleLFRayTracer src/example/example.cpp )
+ADD_SANITIZERS ( ExampleLFRayTracer )
+
+SET_TARGET_PROPERTIES ( ExampleLFRayTracer PROPERTIES OUTPUT_NAME Example )
+TARGET_COMPILE_FEATURES ( ExampleLFRayTracer PRIVATE ${PBRT_CXX11_FEATURES} )
+TARGET_LINK_LIBRARIES ( ExampleLFRayTracer ${ALL_PBRT_LIBS} )
+
 # Tools
 ADD_EXECUTABLE ( bsdftest src/tools/bsdftest.cpp )
 ADD_SANITIZERS ( bsdftest )
