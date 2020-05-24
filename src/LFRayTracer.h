@@ -69,7 +69,7 @@ public:
 	virtual SampleTile* CreateSampleTile( const Int& startX, const Int& startY, const Int& sizeX, const Int& sizeY ) = 0;
     virtual bool MergeSampleTile(SampleTile* tile) = 0;
 	virtual bool DestroySampleTile( SampleTile* tile ) = 0;
-	virtual bool GetColor( const Int& x, const Int& y, Real& r, Real& g, Real& b ) = 0;
+	virtual bool GetColor( const Int& x, const Int& y, Real& r, Real& g, Real& b ) const = 0;
 };
 
 
@@ -82,7 +82,7 @@ public:
 		const VEC2& raster, // Coordinates from [0,Width]x[0,Height].
 		const VEC2& secondary, // Coordinates from [0,1]x[0,1].
 		VEC3& ori, VEC3& dir
-	) = 0;
+	) const = 0;
 
 	virtual Real GenerateRayDifferential(
 		const VEC2& raster, // Coordinates from [0,Width]x[0,Height].
@@ -90,7 +90,7 @@ public:
 		VEC3& ori, VEC3& dir,
 		VEC3& oridx, VEC3& dirdx,
 		VEC3& oridy, VEC3& dirdy
-	);
+	) const;
 };
 
 
@@ -98,7 +98,7 @@ public:
 Real RayGenerator::GenerateRayDifferential(
     const VEC2& raster,     // Coordinates from [0,Width]x[0,Height].
     const VEC2& secondary,  // Coordinates from [0,1]x[0,1].
-    VEC3& ori, VEC3& dir, VEC3& oridx, VEC3& dirdx, VEC3& oridy, VEC3& dirdy )
+    VEC3& ori, VEC3& dir, VEC3& oridx, VEC3& dirdx, VEC3& oridy, VEC3& dirdy ) const
 {
     const Real epsilon = 0.01;
     const Real weight = GenerateRay( raster, secondary, ori, dir );
@@ -145,7 +145,7 @@ public:
 	virtual RayGenerator* CreateDefaultRayGenerator( const Int& width, const Int& height ) const = 0;
 	virtual SampleGenerator* CreateDefaultSampleGenerator( const Int& widht, const Int& height ) const = 0;
 	virtual SampleAccumulator* CreateDefaultSampleAccumulator( const Int& width, const Int& height ) const = 0;
-	virtual bool Render( RayGenerator& raygen, SampleGenerator& sampleGen, SampleAccumulator& sampleAccum ) = 0;
+	virtual bool Render( const RayGenerator& raygen, SampleGenerator& sampleGen, SampleAccumulator& sampleAccum ) const = 0;
 };
 
 
