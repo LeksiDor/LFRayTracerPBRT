@@ -5,6 +5,7 @@
 #include "sampling.h"
 #include "stats.h"
 
+#define LFRAYTRACER_IMPLEMENTATION
 #include "LFRayTracer.h"
 
 

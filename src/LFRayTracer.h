@@ -94,6 +94,7 @@ public:
 };
 
 
+// This define should be used in RT-side library only.
 #ifdef LFRAYTRACER_IMPLEMENTATION
 Real RayGenerator::GenerateRayDifferential(
     const VEC2& raster,     // Coordinates from [0,Width]x[0,Height].
