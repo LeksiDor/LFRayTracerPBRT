@@ -22,8 +22,8 @@ namespace pbrt
 // LFCamera Declarations.
 class LFCamera : public Camera
 {
-  public:
-      LFCamera(
+public:
+    LFCamera(
         const AnimatedTransform& CameraToWorld,
         Float shutterOpen,
         Float shutterClose,
@@ -34,12 +34,17 @@ class LFCamera : public Camera
 
       virtual ~LFCamera();
 
-      virtual Float GenerateRay(const CameraSample& sample,
-                                Ray* ray) const override;
+      virtual Float GenerateRay(
+          const CameraSample& sample,
+          Ray* ray ) const override;
 
-    public:
-      Float Scale = 1.0;
-      lfrt::RayGenerator* RayGen = nullptr;
+      virtual Float GenerateRayDifferential(
+          const CameraSample& sample,
+          RayDifferential* ray ) const override;
+
+public:
+    Float Scale = 1.0;
+    lfrt::RayGenerator* RayGen = nullptr;
 };
 
 LFCamera* CreateLFCamera(
