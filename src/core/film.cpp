@@ -92,9 +92,43 @@ bool Film::MergeSampleTile(lfrt::SampleTile *tile) { return false; }
 
 bool Film::DestroySampleTile(lfrt::SampleTile *tile) { return false; }
 
-bool Film::GetColor(const int &x, const int &y, Float &r, Float &g,
-                    Float &b) const {
-    return false;
+bool Film::GetColor( const int &x, const int &y, Float &r, Float &g, Float &b ) const
+{
+    const Point2i coord = Point2i(x,y);
+    if ( !InsideExclusive(coord, croppedPixelBounds) )
+        return false;
+    const int width = croppedPixelBounds.pMax.x - croppedPixelBounds.pMin.x;
+    const int offset = (coord.x - croppedPixelBounds.pMin.x) +
+                       (coord.y - croppedPixelBounds.pMin.y) * width;
+
+    const auto& pixel = pixels[offset];
+
+    Float rgb[3];
+    XYZToRGB( pixel.xyz, rgb );
+
+    Float filterWeightSum = pixel.filterWeightSum;
+    if (filterWeightSum != 0)
+    {
+        const Float invWt = (Float)1 / filterWeightSum;
+        rgb[0] = std::max( (Float)0, rgb[0] * invWt );
+        rgb[1] = std::max( (Float)0, rgb[1] * invWt );
+        rgb[2] = std::max( (Float)0, rgb[2] * invWt );
+    }
+
+    // Add splat value at pixel
+    const Float splatScale = (Float)1;
+    Float splatRGB[3];
+    Float splatXYZ[3] = { pixel.splatXYZ[0], pixel.splatXYZ[1], pixel.splatXYZ[2] };
+    XYZToRGB( splatXYZ, splatRGB );
+    rgb[0] += splatScale * splatRGB[0];
+    rgb[1] += splatScale * splatRGB[1];
+    rgb[2] += splatScale * splatRGB[2];
+
+    r = scale * rgb[0];
+    g = scale * rgb[1];
+    b = scale * rgb[2];
+
+    return true;
 }
 
 Bounds2i Film::GetSampleBounds() const {
@@ -201,24 +235,21 @@ void Film::WriteImage(Float splatScale) {
         Float filterWeightSum = pixel.filterWeightSum;
         if (filterWeightSum != 0) {
             Float invWt = (Float)1 / filterWeightSum;
-            rgb[3 * offset] = std::max((Float)0, rgb[3 * offset] * invWt);
-            rgb[3 * offset + 1] =
-                std::max((Float)0, rgb[3 * offset + 1] * invWt);
-            rgb[3 * offset + 2] =
-                std::max((Float)0, rgb[3 * offset + 2] * invWt);
+            rgb[3 * offset + 0] = std::max((Float)0, rgb[3 * offset + 0] * invWt);
+            rgb[3 * offset + 1] = std::max((Float)0, rgb[3 * offset + 1] * invWt);
+            rgb[3 * offset + 2] = std::max((Float)0, rgb[3 * offset + 2] * invWt);
         }
 
         // Add splat value at pixel
         Float splatRGB[3];
-        Float splatXYZ[3] = {pixel.splatXYZ[0], pixel.splatXYZ[1],
-                             pixel.splatXYZ[2]};
+        Float splatXYZ[3] = { pixel.splatXYZ[0], pixel.splatXYZ[1], pixel.splatXYZ[2] };
         XYZToRGB(splatXYZ, splatRGB);
-        rgb[3 * offset] += splatScale * splatRGB[0];
+        rgb[3 * offset + 0] += splatScale * splatRGB[0];
         rgb[3 * offset + 1] += splatScale * splatRGB[1];
         rgb[3 * offset + 2] += splatScale * splatRGB[2];
 
         // Scale pixel value by _scale_
-        rgb[3 * offset] *= scale;
+        rgb[3 * offset + 0] *= scale;
         rgb[3 * offset + 1] *= scale;
         rgb[3 * offset + 2] *= scale;
         ++offset;
@@ -275,7 +306,9 @@ FilmTile::~FilmTile() {}
 
 bool FilmTile::AddSample(const lfrt::VEC2 &raster, const lfrt::VEC2 &secondary,
                          const Float &sampleWeight, const Float &rayWeight,
-                         const Float &r, const Float &g, const Float &b) {
+                         const Float &r, const Float &g, const Float &b,
+                         const bool isWeighted )
+{
     return false;
 }
 

@@ -149,7 +149,8 @@ public:
 		const lfrt::VEC2& secondary,
 		const Float& sampleWeight,
 		const Float& rayWeight,
-		const Float& r, const Float& g, const Float& b
+		const Float& r, const Float& g, const Float& b,
+        const bool isWeighted = true
 	) override;
 
     void AddSample(const Point2f &pFilm, Spectrum L,

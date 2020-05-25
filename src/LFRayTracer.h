@@ -61,7 +61,8 @@ public:
 		const VEC2& secondary,
 		const Real& sampleWeight,
 		const Real& rayWeight,
-		const Real& r, const Real& g, const Real& b
+		const Real& r, const Real& g, const Real& b,
+		const bool isWeighted = true
 	) = 0;
 };
 
