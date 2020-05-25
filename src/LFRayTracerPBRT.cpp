@@ -12,6 +12,47 @@ namespace lfrt
 {
 
 
+class DefaultRayGenerator : public RayGenerator
+{
+public:
+    virtual Real GenerateRay(const VEC2& raster, const VEC2& secondary, VEC3& ori, VEC3& dir) const override
+    {
+        return Real();
+    }
+};
+
+
+class DefaultSampleGenerator : public SampleGenerator
+{
+public:
+    virtual SampleGenerator* Clone() const override { return new DefaultSampleGenerator(); }
+    virtual bool ResetPixel( const Int& x, const Int& y ) override { return false; }
+    virtual bool NextSample( Real& weight, VEC2& raster, VEC2& secondary, Real& time ) override
+    {
+        return false;
+    }
+};
+
+
+class DefaultSampleAccumulator : public SampleAccumulator
+{
+public:
+    virtual bool SetSize( const Int& width, const Int& y ) override { return false; }
+    virtual bool GetSize( Int& x, Int& y ) const override { return false; }
+    virtual SampleTile* CreateSampleTile(
+        const Int& startX, const Int& startY, const Int& sizeX, const Int& sizeY ) override
+    {
+        return nullptr;
+    }
+    virtual bool MergeSampleTile( SampleTile* tile ) override { return false; }
+    virtual bool DestroySampleTile( SampleTile* tile ) override { return false; }
+    virtual bool GetColor( const Int& x, const Int& y, Real& r, Real& g, Real& b ) const override
+    {
+        return false;
+    }
+};
+
+
 class LFRayTracerPBRTImpl : public LFRayTracer
 {
 public:
@@ -40,19 +81,19 @@ public:
     virtual RayGenerator* CreateDefaultRayGenerator(
         const Int& width, const Int& height ) const override
     {
-        return nullptr;
+        return new DefaultRayGenerator();
     }
 
     virtual SampleGenerator* CreateDefaultSampleGenerator(
         const Int& width, const Int& height ) const override
     {
-        return nullptr;
+        return new DefaultSampleGenerator();
     }
 
     virtual SampleAccumulator* CreateDefaultSampleAccumulator(
         const Int& width, const Int& height ) const override
     {
-        return nullptr;
+        return new DefaultSampleAccumulator();
     }
 
     virtual bool Render( const RayGenerator& raygen, SampleGenerator& sampleGen,
