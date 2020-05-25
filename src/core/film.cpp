@@ -77,6 +77,26 @@ Film::Film(const Point2i &resolution, const Bounds2f &cropWindow,
     }
 }
 
+Film::~Film() {}
+
+bool Film::SetSize(const int &width, const int &height) { return false; }
+
+bool Film::GetSize(int &width, int &height) const { return false; }
+
+lfrt::SampleTile *Film::CreateSampleTile(const int &startX, const int &startY,
+                                         const int &sizeX, const int &sizeY) {
+    return nullptr;
+}
+
+bool Film::MergeSampleTile(lfrt::SampleTile *tile) { return false; }
+
+bool Film::DestroySampleTile(lfrt::SampleTile *tile) { return false; }
+
+bool Film::GetColor(const int &x, const int &y, Float &r, Float &g,
+                    Float &b) const {
+    return false;
+}
+
 Bounds2i Film::GetSampleBounds() const {
     Bounds2f floatBounds(Floor(Point2f(croppedPixelBounds.pMin) +
                                Vector2f(0.5f, 0.5f) - filter->radius),
@@ -249,6 +269,14 @@ Film *CreateFilm(const ParamSet &params, std::unique_ptr<Filter> filter) {
                                                    Infinity);
     return new Film(Point2i(xres, yres), crop, std::move(filter), diagonal,
                     filename, scale, maxSampleLuminance);
+}
+
+FilmTile::~FilmTile() {}
+
+bool FilmTile::AddSample(const lfrt::VEC2 &raster, const lfrt::VEC2 &secondary,
+                         const Float &sampleWeight, const Float &rayWeight,
+                         const Float &r, const Float &g, const Float &b) {
+    return false;
 }
 
 }  // namespace pbrt

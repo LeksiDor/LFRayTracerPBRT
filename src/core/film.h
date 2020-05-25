@@ -46,6 +46,10 @@
 #include "stats.h"
 #include "parallel.h"
 
+
+#include "LFRayTracer.h"
+
+
 namespace pbrt {
 
 // FilmTilePixel Declarations
@@ -55,13 +59,29 @@ struct FilmTilePixel {
 };
 
 // Film Declarations
-class Film {
-  public:
-    // Film Public Methods
-    Film(const Point2i &resolution, const Bounds2f &cropWindow,
-         std::unique_ptr<Filter> filter, Float diagonal,
-         const std::string &filename, Float scale,
-         Float maxSampleLuminance = Infinity);
+class Film : public lfrt::SampleAccumulator
+{
+public:
+    Film(
+        const Point2i &resolution, const Bounds2f &cropWindow,
+        std::unique_ptr<Filter> filter, Float diagonal,
+        const std::string &filename, Float scale,
+        Float maxSampleLuminance = Infinity );
+
+    virtual ~Film();
+
+    virtual bool SetSize( const int& width, const int& height ) override;
+    virtual bool GetSize( int& width, int& height ) const override;
+    virtual lfrt::SampleTile* CreateSampleTile(
+        const int& startX, const int& startY,
+        const int& sizeX,  const int& sizeY ) override;
+    virtual bool MergeSampleTile( lfrt::SampleTile* tile ) override;
+    virtual bool DestroySampleTile( lfrt::SampleTile* tile ) override;
+    virtual bool GetColor(
+        const int& x, const int& y,
+        Float& r, Float& g, Float& b ) const override;
+
+
     Bounds2i GetSampleBounds() const;
     Bounds2f GetPhysicalExtent() const;
     std::unique_ptr<FilmTile> GetFilmTile(const Bounds2i &sampleBounds);
@@ -70,15 +90,15 @@ class Film {
     void AddSplat(const Point2f &p, Spectrum v);
     void WriteImage(Float splatScale = 1);
     void Clear();
-
+    
     // Film Public Data
     const Point2i fullResolution;
     const Float diagonal;
     std::unique_ptr<Filter> filter;
     const std::string filename;
     Bounds2i croppedPixelBounds;
-
-  private:
+    
+private:
     // Film Private Data
     struct Pixel {
         Pixel() { xyz[0] = xyz[1] = xyz[2] = filterWeightSum = 0; }
@@ -87,13 +107,14 @@ class Film {
         AtomicFloat splatXYZ[3];
         Float pad;
     };
+
     std::unique_ptr<Pixel[]> pixels;
     static PBRT_CONSTEXPR int filterTableWidth = 16;
     Float filterTable[filterTableWidth * filterTableWidth];
     std::mutex mutex;
     const Float scale;
     const Float maxSampleLuminance;
-
+    
     // Film Private Methods
     Pixel &GetPixel(const Point2i &p) {
         CHECK(InsideExclusive(p, croppedPixelBounds));
@@ -104,9 +125,10 @@ class Film {
     }
 };
 
-class FilmTile {
-  public:
-    // FilmTile Public Methods
+
+class FilmTile : public lfrt::SampleTile
+{
+public:
     FilmTile(const Bounds2i &pixelBounds, const Vector2f &filterRadius,
              const Float *filterTable, int filterTableSize,
              Float maxSampleLuminance)
@@ -116,8 +138,20 @@ class FilmTile {
           filterTable(filterTable),
           filterTableSize(filterTableSize),
           maxSampleLuminance(maxSampleLuminance) {
-        pixels = std::vector<FilmTilePixel>(std::max(0, pixelBounds.Area()));
+        pixels = std::vector<FilmTilePixel>(std::max(0,
+        pixelBounds.Area()));
     }
+
+    virtual ~FilmTile();
+
+    virtual bool AddSample(
+		const lfrt::VEC2& raster,
+		const lfrt::VEC2& secondary,
+		const Float& sampleWeight,
+		const Float& rayWeight,
+		const Float& r, const Float& g, const Float& b
+	) override;
+
     void AddSample(const Point2f &pFilm, Spectrum L,
                    Float sampleWeight = 1.) {
         ProfilePhase _(Prof::AddFilmSample);
@@ -186,7 +220,10 @@ class FilmTile {
     friend class Film;
 };
 
+
+
 Film *CreateFilm(const ParamSet &params, std::unique_ptr<Filter> filter);
+
 
 }  // namespace pbrt
 
