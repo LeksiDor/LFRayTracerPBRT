@@ -44,7 +44,7 @@ public:
     }
 
     virtual SampleGenerator* CreateDefaultSampleGenerator(
-        const Int& widht, const Int& height ) const override
+        const Int& width, const Int& height ) const override
     {
         return nullptr;
     }

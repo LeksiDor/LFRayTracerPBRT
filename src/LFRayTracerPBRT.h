@@ -8,7 +8,6 @@ namespace lfrt
 class LFRayTracer;
 
 
-//LFRayTracer* CreateLFRayTracerPBRT();
 LFRayTracer* LFRayTracerPBRTInstance();
 bool LFRayTRacerPBRTRelease();
 

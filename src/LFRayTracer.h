@@ -141,7 +141,7 @@ public:
 	virtual ~LFRayTracer() = default;
 	virtual bool LoadScene( const std::string& filepath ) = 0;
 	virtual RayGenerator* CreateDefaultRayGenerator( const Int& width, const Int& height ) const = 0;
-	virtual SampleGenerator* CreateDefaultSampleGenerator( const Int& widht, const Int& height ) const = 0;
+	virtual SampleGenerator* CreateDefaultSampleGenerator( const Int& width, const Int& height ) const = 0;
 	virtual SampleAccumulator* CreateDefaultSampleAccumulator( const Int& width, const Int& height ) const = 0;
 	virtual bool Render( const RayGenerator& raygen, SampleGenerator& sampleGen, SampleAccumulator& sampleAccum ) const = 0;
 };
