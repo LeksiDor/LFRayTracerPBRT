@@ -88,6 +88,8 @@ void pbrtObjectEnd();
 void pbrtObjectInstance(const std::string &name);
 void pbrtWorldEnd();
 
+void pbrtRenderScene();
+
 void pbrtParseFile(std::string filename);
 void pbrtParseString(std::string str);
 

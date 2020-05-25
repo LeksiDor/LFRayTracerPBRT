@@ -1599,7 +1599,12 @@ void pbrtWorldEnd() {
         Warning("Missing end to pbrtTransformBegin()");
         pushedTransforms.pop_back();
     }
+    currentApiState = APIState::OptionsBlock;
+}
 
+
+void pbrtRenderScene() 
+{
     // Create scene and render
     if (PbrtOptions.cat || PbrtOptions.toPly) {
         printf("%*sWorldEnd\n", catIndentCount, "");
@@ -1626,7 +1631,6 @@ void pbrtWorldEnd() {
     // destructors can run and update stats as needed.
     graphicsState = GraphicsState();
     transformCache.Clear();
-    currentApiState = APIState::OptionsBlock;
     ImageTexture<Float, Float>::ClearCache();
     ImageTexture<RGBSpectrum, Spectrum>::ClearCache();
     renderOptions.reset(new RenderOptions);
@@ -1647,6 +1651,7 @@ void pbrtWorldEnd() {
     namedCoordinateSystems.erase(namedCoordinateSystems.begin(),
                                  namedCoordinateSystems.end());
 }
+
 
 Scene *RenderOptions::MakeScene() {
     std::shared_ptr<Primitive> accelerator =

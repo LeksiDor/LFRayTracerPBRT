@@ -20,6 +20,12 @@ int main( int argc, char *argv[] )
 
     raytracer->LoadScene( argv[1] );
 
+    RayGenerator* raygen = raytracer->CreateDefaultRayGenerator( 800, 600 );
+    SampleGenerator* sampleGen = raytracer->CreateDefaultSampleGenerator( 800, 600 );
+    SampleAccumulator* sampleAccum = raytracer->CreateDefaultSampleAccumulator( 800, 600 );
+
+    raytracer->Render( *raygen, *sampleGen, *sampleAccum );
+
     LFRayTRacerPBRTRelease();
 
     return 0;
