@@ -12,45 +12,7 @@ namespace lfrt
 {
 
 
-class DefaultRayGenerator : public RayGenerator
-{
-public:
-    virtual Real GenerateRay(const VEC2& raster, const VEC2& secondary, VEC3& ori, VEC3& dir) const override
-    {
-        return Real();
-    }
-};
 
-
-class DefaultSampleGenerator : public SampleGenerator
-{
-public:
-    virtual SampleGenerator* Clone() const override { return new DefaultSampleGenerator(); }
-    virtual bool ResetPixel( const Int& x, const Int& y ) override { return false; }
-    virtual bool NextSample( Real& weight, VEC2& raster, VEC2& secondary, Real& time ) override
-    {
-        return false;
-    }
-};
-
-
-class DefaultSampleAccumulator : public SampleAccumulator
-{
-public:
-    virtual bool SetSize( const Int& width, const Int& y ) override { return false; }
-    virtual bool GetSize( Int& x, Int& y ) const override { return false; }
-    virtual SampleTile* CreateSampleTile(
-        const Int& startX, const Int& startY, const Int& sizeX, const Int& sizeY ) override
-    {
-        return nullptr;
-    }
-    virtual bool MergeSampleTile( SampleTile* tile ) override { return false; }
-    virtual bool DestroySampleTile( SampleTile* tile ) override { return false; }
-    virtual bool GetColor( const Int& x, const Int& y, Real& r, Real& g, Real& b ) const override
-    {
-        return false;
-    }
-};
 
 
 class LFRayTracerPBRTImpl : public LFRayTracer
@@ -128,5 +90,71 @@ bool LFRayTRacerPBRTRelease()
     return true;
 }
 
+
+
+Real DefaultRayGenerator::GenerateRay( const VEC2& raster, const VEC2& secondary, VEC3& ori, VEC3& dir ) const
+{
+    return Real();
+}
+
+
+SampleGenerator* DefaultSampleGenerator::Clone() const
+{
+    return new DefaultSampleGenerator();
+}
+
+
+bool DefaultSampleGenerator::ResetPixel( const Int& x, const Int& y )
+{
+    return false;
+}
+
+
+bool DefaultSampleGenerator::NextSample( Real& weight, VEC2& raster, VEC2& secondary, Real& time )
+{
+    return false;
+}
+
+
+bool DefaultSampleAccumulator::SetSize( const Int& width, const Int& height )
+{
+    m_Width = width;
+    m_Height = height;
+    return true;
+}
+
+
+bool DefaultSampleAccumulator::GetSize( Int& width, Int& height ) const
+{
+    width = m_Width;
+    height = m_Height;
+    return true;
+}
+
+
+SampleTile* DefaultSampleAccumulator::CreateSampleTile(
+    const Int& startX, const Int& startY, const Int& sizeX, const Int& sizeY )
+{
+    return nullptr;
+}
+
+
+bool DefaultSampleAccumulator::MergeSampleTile( SampleTile* tile )
+{
+    return false;
+}
+
+
+bool DefaultSampleAccumulator::DestroySampleTile( SampleTile* tile )
+{
+    return false;
+}
+
+
+bool DefaultSampleAccumulator::GetColor(
+    const Int& x, const Int& y, Real& r, Real& g, Real& b ) const
+{
+    return false;
+}
 
 }  // namespace lfrt

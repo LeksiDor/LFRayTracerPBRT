@@ -1,4 +1,3 @@
-#include "LFRayTracer.h"
 #include "LFRayTracerPBRT.h"
 #include <iostream>
 
