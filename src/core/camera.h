@@ -99,7 +99,7 @@ class ProjectiveCamera : public Camera {
 
         // Compute projective camera screen transformations
         ScreenToRaster =
-            Scale(film->fullResolution.x, film->fullResolution.y, 1) *
+            Scale( film->Width(), film->Height(), 1) *
             Scale(1 / (screenWindow.pMax.x - screenWindow.pMin.x),
                   1 / (screenWindow.pMin.y - screenWindow.pMax.y), 1) *
             Translate(Vector3f(-screenWindow.pMin.x, -screenWindow.pMax.y, 0));

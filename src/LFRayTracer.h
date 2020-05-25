@@ -72,7 +72,9 @@ class SampleAccumulator
 public:
 	virtual ~SampleAccumulator() = default;
 	virtual bool SetSize( const Int& width, const Int& height ) = 0;
-    virtual bool GetSize( Int& width, Int& height ) const = 0;
+    //virtual bool GetSize( Int& width, Int& height ) const = 0;
+	virtual Int Width() const = 0;
+	virtual Int Height() const = 0;
 	virtual SampleTile* CreateSampleTile( const Int& startX, const Int& startY, const Int& sizeX, const Int& sizeY ) = 0;
     virtual bool MergeSampleTile(SampleTile* tile) = 0;
 	virtual bool DestroySampleTile( SampleTile* tile ) = 0;

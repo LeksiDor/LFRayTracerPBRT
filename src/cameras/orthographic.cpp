@@ -133,7 +133,7 @@ OrthographicCamera *CreateOrthographicCamera(const ParamSet &params,
     Float focaldistance = params.FindOneFloat("focaldistance", 1e6f);
     Float frame = params.FindOneFloat(
         "frameaspectratio",
-        Float(film->fullResolution.x) / Float(film->fullResolution.y));
+        Float(film->Width()) / Float(film->Height()));
     Bounds2f screen;
     if (frame > 1.f) {
         screen.pMin.x = -frame;

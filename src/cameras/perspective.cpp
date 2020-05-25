@@ -58,9 +58,8 @@ PerspectiveCamera::PerspectiveCamera(const AnimatedTransform &CameraToWorld,
         (RasterToCamera(Point3f(0, 1, 0)) - RasterToCamera(Point3f(0, 0, 0)));
 
     // Compute image plane bounds at $z=1$ for _PerspectiveCamera_
-    Point2i res = film->fullResolution;
     Point3f pMin = RasterToCamera(Point3f(0, 0, 0));
-    Point3f pMax = RasterToCamera(Point3f(res.x, res.y, 0));
+    Point3f pMax = RasterToCamera(Point3f( film->Width(), film->Height(), 0 ));
     pMin /= pMin.z;
     pMax /= pMax.z;
     A = std::abs((pMax.x - pMin.x) * (pMax.y - pMin.y));
@@ -239,7 +238,7 @@ PerspectiveCamera *CreatePerspectiveCamera(const ParamSet &params,
     Float focaldistance = params.FindOneFloat("focaldistance", 1e6);
     Float frame = params.FindOneFloat(
         "frameaspectratio",
-        Float(film->fullResolution.x) / Float(film->fullResolution.y));
+        Float(film->Width()) / Float(film->Height()));
     Bounds2f screen;
     if (frame > 1.f) {
         screen.pMin.x = -frame;

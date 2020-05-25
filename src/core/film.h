@@ -62,16 +62,13 @@ struct FilmTilePixel {
 class Film : public lfrt::SampleAccumulator
 {
 public:
-    Film(
-        const Point2i &resolution, const Bounds2f &cropWindow,
-        std::unique_ptr<Filter> filter, Float diagonal,
-        const std::string &filename, Float scale,
-        Float maxSampleLuminance = Infinity );
+    Film();
 
     virtual ~Film();
 
     virtual bool SetSize( const int& width, const int& height ) override;
-    virtual bool GetSize( int& width, int& height ) const override;
+    virtual int Width()  const override { return fullResolution.x; };
+    virtual int Height() const override { return fullResolution.y; };
     virtual lfrt::SampleTile* CreateSampleTile(
         const int& startX, const int& startY,
         const int& sizeX,  const int& sizeY ) override;
@@ -81,6 +78,7 @@ public:
         const int& x, const int& y,
         Float& r, Float& g, Float& b ) const override;
 
+    bool Initialize( const ParamSet &params, std::unique_ptr<Filter> filter );
 
     Bounds2i GetSampleBounds() const;
     Bounds2f GetPhysicalExtent() const;
@@ -88,14 +86,12 @@ public:
     void MergeFilmTile(std::unique_ptr<FilmTile> tile);
     void SetImage(const Spectrum *img) const;
     void AddSplat(const Point2f &p, Spectrum v);
-    void WriteImage(Float splatScale = 1);
     void Clear();
     
+    const Float& Diagonal() const { return diagonal; }
+
     // Film Public Data
-    const Point2i fullResolution;
-    const Float diagonal;
     std::unique_ptr<Filter> filter;
-    const std::string filename;
     Bounds2i croppedPixelBounds;
     
 private:
@@ -108,12 +104,15 @@ private:
         Float pad;
     };
 
+    Point2i fullResolution;
+    Float diagonal;
+
     std::unique_ptr<Pixel[]> pixels;
     static PBRT_CONSTEXPR int filterTableWidth = 16;
     Float filterTable[filterTableWidth * filterTableWidth];
     std::mutex mutex;
-    const Float scale;
-    const Float maxSampleLuminance;
+    Float scale;
+    Float maxSampleLuminance;
     
     // Film Private Methods
     Pixel &GetPixel(const Point2i &p) {
@@ -220,10 +219,6 @@ public:
     const Float maxSampleLuminance;
     friend class Film;
 };
-
-
-
-Film *CreateFilm(const ParamSet &params, std::unique_ptr<Filter> filter);
 
 
 }  // namespace pbrt

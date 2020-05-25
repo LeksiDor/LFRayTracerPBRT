@@ -321,25 +321,26 @@ void BDPTIntegrator::Render(const Scene &scene) {
     ProgressReporter reporter(nXTiles * nYTiles, "Rendering");
 
     // Allocate buffers for debug visualization
-    const int bufferCount = (1 + maxDepth) * (6 + maxDepth) / 2;
-    std::vector<std::unique_ptr<Film>> weightFilms(bufferCount);
-    if (visualizeStrategies || visualizeWeights) {
-        for (int depth = 0; depth <= maxDepth; ++depth) {
-            for (int s = 0; s <= depth + 2; ++s) {
-                int t = depth + 2 - s;
-                if (t == 0 || (s == 1 && t == 1)) continue;
+    // ToDo: Update!
+    //const int bufferCount = (1 + maxDepth) * (6 + maxDepth) / 2;
+    //std::vector<std::unique_ptr<Film>> weightFilms(bufferCount);
+    //if (visualizeStrategies || visualizeWeights) {
+    //    for (int depth = 0; depth <= maxDepth; ++depth) {
+    //        for (int s = 0; s <= depth + 2; ++s) {
+    //            int t = depth + 2 - s;
+    //            if (t == 0 || (s == 1 && t == 1)) continue;
 
-                std::string filename =
-                    StringPrintf("bdpt_d%02i_s%02i_t%02i.exr", depth, s, t);
+    //            std::string filename =
+    //                StringPrintf("bdpt_d%02i_s%02i_t%02i.exr", depth, s, t);
 
-                weightFilms[BufferIndex(s, t)] = std::unique_ptr<Film>(new Film(
-                    film->fullResolution,
-                    Bounds2f(Point2f(0, 0), Point2f(1, 1)),
-                    std::unique_ptr<Filter>(CreateBoxFilter(ParamSet())),
-                    film->diagonal * 1000, filename, 1.f));
-            }
-        }
-    }
+    //            weightFilms[BufferIndex(s, t)] = std::unique_ptr<Film>(new Film(
+    //                Point2i( film->Width(),film->Height() ),
+    //                Bounds2f(Point2f(0, 0), Point2f(1, 1)),
+    //                std::unique_ptr<Filter>(CreateBoxFilter(ParamSet())),
+    //                film->Diagonal() * 1000, filename, 1.f));
+    //        }
+    //    }
+    //}
 
     // Render and write the output image to disk
     if (scene.lights.size() > 0) {
@@ -410,8 +411,9 @@ void BDPTIntegrator::Render(const Scene &scene) {
                                     value =
                                         misWeight == 0 ? 0 : Lpath / misWeight;
                                 if (visualizeWeights) value = Lpath;
-                                weightFilms[BufferIndex(s, t)]->AddSplat(
-                                    pFilmNew, value);
+                                // ToDo: Update!
+                                //weightFilms[BufferIndex(s, t)]->AddSplat(
+                                //    pFilmNew, value);
                             }
                             if (t != 1)
                                 L += Lpath;
@@ -431,14 +433,15 @@ void BDPTIntegrator::Render(const Scene &scene) {
         }, Point2i(nXTiles, nYTiles));
         reporter.Done();
     }
-    film->WriteImage(1.0f / sampler->samplesPerPixel);
+    //film->WriteImage(1.0f / sampler->samplesPerPixel);
 
     // Write buffers for debug visualization
-    if (visualizeStrategies || visualizeWeights) {
-        const Float invSampleCount = 1.0f / sampler->samplesPerPixel;
-        for (size_t i = 0; i < weightFilms.size(); ++i)
-            if (weightFilms[i]) weightFilms[i]->WriteImage(invSampleCount);
-    }
+    // ToDo: Update!
+    //if (visualizeStrategies || visualizeWeights) {
+    //    const Float invSampleCount = 1.0f / sampler->samplesPerPixel;
+    //    for (size_t i = 0; i < weightFilms.size(); ++i)
+    //        if (weightFilms[i]) weightFilms[i]->WriteImage(invSampleCount);
+    //}
 }
 
 Spectrum ConnectBDPT(

@@ -44,8 +44,8 @@ Float EnvironmentCamera::GenerateRay(const CameraSample &sample,
                                      Ray *ray) const {
     ProfilePhase prof(Prof::GenerateCameraRay);
     // Compute environment camera ray direction
-    Float theta = Pi * sample.pFilm.y / film->fullResolution.y;
-    Float phi = 2 * Pi * sample.pFilm.x / film->fullResolution.x;
+    Float theta = Pi * sample.pFilm.y / film->Width();
+    Float phi = 2 * Pi * sample.pFilm.x / film->Height();
     Vector3f dir(std::sin(theta) * std::cos(phi), std::cos(theta),
                  std::sin(theta) * std::sin(phi));
     *ray = Ray(Point3f(0, 0, 0), dir, Infinity,
@@ -70,7 +70,7 @@ EnvironmentCamera *CreateEnvironmentCamera(const ParamSet &params,
     Float focaldistance = params.FindOneFloat("focaldistance", 1e30f);
     Float frame = params.FindOneFloat(
         "frameaspectratio",
-        Float(film->fullResolution.x) / Float(film->fullResolution.y));
+        Float(film->Width()) / Float(film->Height()));
     Bounds2f screen;
     if (frame > 1.f) {
         screen.pMin.x = -frame;

@@ -93,6 +93,9 @@ void pbrtRenderScene();
 void pbrtParseFile(std::string filename);
 void pbrtParseString(std::string str);
 
+
+Film* theFilm();
+
 }  // namespace pbrt
 
 #endif  // PBRT_CORE_API_H

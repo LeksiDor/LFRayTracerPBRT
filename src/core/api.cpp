@@ -856,17 +856,6 @@ std::unique_ptr<Filter> MakeFilter(const std::string &name,
     return std::unique_ptr<Filter>(filter);
 }
 
-Film *MakeFilm(const std::string &name, const ParamSet &paramSet,
-               std::unique_ptr<Filter> filter) {
-    Film *film = nullptr;
-    if (name == "image")
-        film = CreateFilm(paramSet, std::move(filter));
-    else
-        Warning("Film \"%s\" unknown.", name.c_str());
-    paramSet.ReportUnused();
-    return film;
-}
-
 // API Function Definitions
 void pbrtInit(const Options &opt) {
     PbrtOptions = opt;
@@ -1720,15 +1709,29 @@ Integrator *RenderOptions::MakeIntegrator() const {
 
 Camera *RenderOptions::MakeCamera() const {
     std::unique_ptr<Filter> filter = MakeFilter(FilterName, FilterParams);
-    Film *film = MakeFilm(FilmName, FilmParams, std::move(filter));
-    if (!film) {
+    Film *film = theFilm();
+    if ( FilmName != "image" )
+    {
         Error("Unable to create film.");
         return nullptr;
     }
+    film->Initialize( FilmParams, std::move(filter) );
     Camera *camera = pbrt::MakeCamera(CameraName, CameraParams, CameraToWorld,
                                   renderOptions->transformStartTime,
                                   renderOptions->transformEndTime, film);
     return camera;
 }
+
+
+Film *theFilm()
+{
+    static std::shared_ptr<Film> film = nullptr;
+    if ( film == nullptr )
+    {
+        film = std::make_shared<Film>();
+    }
+    return film.get();
+}
+
 
 }  // namespace pbrt

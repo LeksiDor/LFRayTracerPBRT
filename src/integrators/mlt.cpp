@@ -262,7 +262,7 @@ void MLTIntegrator::Render(const Scene &scene) {
     }
 
     // Store final image computed with MLT
-    camera->film->WriteImage(b / mutationsPerPixel);
+    //camera->film->WriteImage(b / mutationsPerPixel);
 }
 
 MLTIntegrator *CreateMLTIntegrator(const ParamSet &params,

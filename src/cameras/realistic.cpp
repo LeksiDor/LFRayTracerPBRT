@@ -84,8 +84,8 @@ RealisticCamera::RealisticCamera(const AnimatedTransform &CameraToWorld,
     int nSamples = 64;
     exitPupilBounds.resize(nSamples);
     ParallelFor([&](int i) {
-        Float r0 = (Float)i / nSamples * film->diagonal / 2;
-        Float r1 = (Float)(i + 1) / nSamples * film->diagonal / 2;
+        Float r0 = (Float)i / nSamples * film->Diagonal() / 2;
+        Float r1 = (Float)(i + 1) / nSamples * film->Diagonal() / 2;
         exitPupilBounds[i] = BoundExitPupil(r0, r1);
     }, nSamples);
 
@@ -437,7 +437,7 @@ void RealisticCamera::ComputeCardinalPoints(const Ray &rIn, const Ray &rOut,
 void RealisticCamera::ComputeThickLensApproximation(Float pz[2],
                                                     Float fz[2]) const {
     // Find height $x$ from optical axis for parallel rays
-    Float x = .001 * film->diagonal;
+    Float x = .001 * film->Diagonal();
 
     // Compute cardinal points for film side of lens system
     Ray rScene(Point3f(x, 0, LensFrontZ() + 1), Vector3f(0, 0, -1));
@@ -494,7 +494,7 @@ Float RealisticCamera::FocusBinarySearch(Float focusDistance) {
 
 Float RealisticCamera::FocusDistance(Float filmDistance) {
     // Find offset ray from film center through lens
-    Bounds2f bounds = BoundExitPupil(0, .001 * film->diagonal);
+    Bounds2f bounds = BoundExitPupil(0, .001 * film->Diagonal() );
 
     const std::array<Float, 3> scaleFactors = {0.1f, 0.01f, 0.001f};
     Float lu = 0.0f;
@@ -615,7 +615,7 @@ Point3f RealisticCamera::SampleExitPupil(const Point2f &pFilm,
                                          Float *sampleBoundsArea) const {
     // Find exit pupil bound for sample distance from film center
     Float rFilm = std::sqrt(pFilm.x * pFilm.x + pFilm.y * pFilm.y);
-    int rIndex = rFilm / (film->diagonal / 2) * exitPupilBounds.size();
+    int rIndex = rFilm / (film->Diagonal() / 2) * exitPupilBounds.size();
     rIndex = std::min((int)exitPupilBounds.size() - 1, rIndex);
     Bounds2f pupilBounds = exitPupilBounds[rIndex];
     if (sampleBoundsArea) *sampleBoundsArea = pupilBounds.Area();
@@ -631,7 +631,7 @@ Point3f RealisticCamera::SampleExitPupil(const Point2f &pFilm,
 }
 
 void RealisticCamera::TestExitPupilBounds() const {
-    Float filmDiagonal = film->diagonal;
+    Float filmDiagonal = film->Diagonal();
 
     static RNG rng;
 
@@ -680,8 +680,8 @@ Float RealisticCamera::GenerateRay(const CameraSample &sample, Ray *ray) const {
     ProfilePhase prof(Prof::GenerateCameraRay);
     ++totalRays;
     // Find point on film, _pFilm_, corresponding to _sample.pFilm_
-    Point2f s(sample.pFilm.x / film->fullResolution.x,
-              sample.pFilm.y / film->fullResolution.y);
+    Point2f s(sample.pFilm.x / film->Width(),
+              sample.pFilm.y / film->Height());
     Point2f pFilm2 = film->GetPhysicalExtent().Lerp(s);
     Point3f pFilm(-pFilm2.x, pFilm2.y, 0);
 

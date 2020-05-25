@@ -39,7 +39,8 @@
 namespace pbrt {
 
 // Camera Method Definitions
-Camera::~Camera() { delete film; }
+//Camera::~Camera() { delete film; }
+Camera::~Camera() {}
 
 Camera::Camera(const AnimatedTransform &CameraToWorld, Float shutterOpen,
                Float shutterClose, Film *film, const Medium *medium)

@@ -26,20 +26,6 @@ public:
 };
 
 
-class DefaultSampleAccumulator : public SampleAccumulator
-{
-public:
-    virtual bool SetSize( const Int& width, const Int& height ) override;
-    virtual bool GetSize( Int& width, Int& height ) const override;
-    virtual SampleTile* CreateSampleTile( const Int& startX, const Int& startY, const Int& sizeX, const Int& sizeY ) override;
-    virtual bool MergeSampleTile( SampleTile* tile ) override;
-    virtual bool DestroySampleTile( SampleTile* tile ) override;
-    virtual bool GetColor( const Int& x, const Int& y, Real& r, Real& g, Real& b ) const override;
-private:
-    Int m_Width  = 0;
-    Int m_Height = 0;
-};
-
 
 LFRayTracer* LFRayTracerPBRTInstance();
 bool LFRayTRacerPBRTRelease();

@@ -42,46 +42,13 @@ namespace pbrt {
 STAT_MEMORY_COUNTER("Memory/Film pixels", filmPixelMemory);
 
 // Film Method Definitions
-Film::Film(const Point2i &resolution, const Bounds2f &cropWindow,
-           std::unique_ptr<Filter> filt, Float diagonal,
-           const std::string &filename, Float scale, Float maxSampleLuminance)
-    : fullResolution(resolution),
-      diagonal(diagonal * .001),
-      filter(std::move(filt)),
-      filename(filename),
-      scale(scale),
-      maxSampleLuminance(maxSampleLuminance) {
-    // Compute film image bounds
-    croppedPixelBounds =
-        Bounds2i(Point2i(std::ceil(fullResolution.x * cropWindow.pMin.x),
-                         std::ceil(fullResolution.y * cropWindow.pMin.y)),
-                 Point2i(std::ceil(fullResolution.x * cropWindow.pMax.x),
-                         std::ceil(fullResolution.y * cropWindow.pMax.y)));
-    LOG(INFO) << "Created film with full resolution " << resolution <<
-        ". Crop window of " << cropWindow << " -> croppedPixelBounds " <<
-        croppedPixelBounds;
 
-    // Allocate film image storage
-    pixels = std::unique_ptr<Pixel[]>(new Pixel[croppedPixelBounds.Area()]);
-    filmPixelMemory += croppedPixelBounds.Area() * sizeof(Pixel);
-
-    // Precompute filter weight table
-    int offset = 0;
-    for (int y = 0; y < filterTableWidth; ++y) {
-        for (int x = 0; x < filterTableWidth; ++x, ++offset) {
-            Point2f p;
-            p.x = (x + 0.5f) * filter->radius.x / filterTableWidth;
-            p.y = (y + 0.5f) * filter->radius.y / filterTableWidth;
-            filterTable[offset] = filter->Evaluate(p);
-        }
-    }
-}
+Film::Film() {}
 
 Film::~Film() {}
 
 bool Film::SetSize(const int &width, const int &height) { return false; }
 
-bool Film::GetSize(int &width, int &height) const { return false; }
 
 lfrt::SampleTile *Film::CreateSampleTile(const int &startX, const int &startY,
                                          const int &sizeX, const int &sizeY) {
@@ -127,6 +94,67 @@ bool Film::GetColor( const int &x, const int &y, Float &r, Float &g, Float &b ) 
     r = scale * rgb[0];
     g = scale * rgb[1];
     b = scale * rgb[2];
+
+    return true;
+}
+
+
+bool Film::Initialize( const ParamSet &params, std::unique_ptr<Filter> filt )
+{
+    int xres = params.FindOneInt("xresolution", 1280);
+    int yres = params.FindOneInt("yresolution", 720);
+    if (PbrtOptions.quickRender) xres = std::max(1, xres / 4);
+    if (PbrtOptions.quickRender) yres = std::max(1, yres / 4);
+    Bounds2f cropWindow;
+    int cwi;
+    const Float *cr = params.FindFloat("cropwindow", &cwi);
+    if (cr && cwi == 4) {
+        cropWindow.pMin.x = Clamp(std::min(cr[0], cr[1]), 0.f, 1.f);
+        cropWindow.pMax.x = Clamp(std::max(cr[0], cr[1]), 0.f, 1.f);
+        cropWindow.pMin.y = Clamp(std::min(cr[2], cr[3]), 0.f, 1.f);
+        cropWindow.pMax.y = Clamp(std::max(cr[2], cr[3]), 0.f, 1.f);
+    }
+    else if (cr)
+    {
+        Error("%d values supplied for \"cropwindow\". Expected 4.", cwi);
+        return false;
+    }
+    else
+        cropWindow = Bounds2f(Point2f(Clamp(PbrtOptions.cropWindow[0][0], 0, 1),
+                                Clamp(PbrtOptions.cropWindow[1][0], 0, 1)),
+                        Point2f(Clamp(PbrtOptions.cropWindow[0][1], 0, 1),
+                                Clamp(PbrtOptions.cropWindow[1][1], 0, 1)));
+
+    scale = params.FindOneFloat("scale", 1.);
+    diagonal = params.FindOneFloat("diagonal", 35.);
+    maxSampleLuminance = params.FindOneFloat( "maxsampleluminance", Infinity );
+    fullResolution = Point2i(xres, yres);
+    filter = std::move(filt);
+
+    // Compute film image bounds
+    croppedPixelBounds =
+        Bounds2i(Point2i(std::ceil(fullResolution.x * cropWindow.pMin.x),
+                         std::ceil(fullResolution.y * cropWindow.pMin.y)),
+                 Point2i(std::ceil(fullResolution.x * cropWindow.pMax.x),
+                         std::ceil(fullResolution.y * cropWindow.pMax.y)));
+    LOG(INFO) << "Created film with full resolution " << fullResolution
+              << ". Crop window of " << cropWindow << " -> croppedPixelBounds "
+              << croppedPixelBounds;
+
+    // Allocate film image storage
+    pixels = std::unique_ptr<Pixel[]>(new Pixel[croppedPixelBounds.Area()]);
+    filmPixelMemory += croppedPixelBounds.Area() * sizeof(Pixel);
+
+    // Precompute filter weight table
+    int offset = 0;
+    for (int y = 0; y < filterTableWidth; ++y) {
+        for (int x = 0; x < filterTableWidth; ++x, ++offset) {
+            Point2f p;
+            p.x = (x + 0.5f) * filter->radius.x / filterTableWidth;
+            p.y = (y + 0.5f) * filter->radius.y / filterTableWidth;
+            filterTable[offset] = filter->Evaluate(p);
+        }
+    }
 
     return true;
 }
@@ -220,87 +248,6 @@ void Film::AddSplat(const Point2f &p, Spectrum v) {
     for (int i = 0; i < 3; ++i) pixel.splatXYZ[i].Add(xyz[i]);
 }
 
-void Film::WriteImage(Float splatScale) {
-    // Convert image to RGB and compute final pixel values
-    LOG(INFO) <<
-        "Converting image to RGB and computing final weighted pixel values";
-    std::unique_ptr<Float[]> rgb(new Float[3 * croppedPixelBounds.Area()]);
-    int offset = 0;
-    for (Point2i p : croppedPixelBounds) {
-        // Convert pixel XYZ color to RGB
-        Pixel &pixel = GetPixel(p);
-        XYZToRGB(pixel.xyz, &rgb[3 * offset]);
-
-        // Normalize pixel with weight sum
-        Float filterWeightSum = pixel.filterWeightSum;
-        if (filterWeightSum != 0) {
-            Float invWt = (Float)1 / filterWeightSum;
-            rgb[3 * offset + 0] = std::max((Float)0, rgb[3 * offset + 0] * invWt);
-            rgb[3 * offset + 1] = std::max((Float)0, rgb[3 * offset + 1] * invWt);
-            rgb[3 * offset + 2] = std::max((Float)0, rgb[3 * offset + 2] * invWt);
-        }
-
-        // Add splat value at pixel
-        Float splatRGB[3];
-        Float splatXYZ[3] = { pixel.splatXYZ[0], pixel.splatXYZ[1], pixel.splatXYZ[2] };
-        XYZToRGB(splatXYZ, splatRGB);
-        rgb[3 * offset + 0] += splatScale * splatRGB[0];
-        rgb[3 * offset + 1] += splatScale * splatRGB[1];
-        rgb[3 * offset + 2] += splatScale * splatRGB[2];
-
-        // Scale pixel value by _scale_
-        rgb[3 * offset + 0] *= scale;
-        rgb[3 * offset + 1] *= scale;
-        rgb[3 * offset + 2] *= scale;
-        ++offset;
-    }
-
-    // Write RGB image
-    LOG(INFO) << "Writing image " << filename << " with bounds " <<
-        croppedPixelBounds;
-    pbrt::WriteImage(filename, &rgb[0], croppedPixelBounds, fullResolution);
-}
-
-Film *CreateFilm(const ParamSet &params, std::unique_ptr<Filter> filter) {
-    std::string filename;
-    if (PbrtOptions.imageFile != "") {
-        filename = PbrtOptions.imageFile;
-        std::string paramsFilename = params.FindOneString("filename", "");
-        if (paramsFilename != "")
-            Warning(
-                "Output filename supplied on command line, \"%s\" is overriding "
-                "filename provided in scene description file, \"%s\".",
-                PbrtOptions.imageFile.c_str(), paramsFilename.c_str());
-    } else
-        filename = params.FindOneString("filename", "pbrt.exr");
-
-    int xres = params.FindOneInt("xresolution", 1280);
-    int yres = params.FindOneInt("yresolution", 720);
-    if (PbrtOptions.quickRender) xres = std::max(1, xres / 4);
-    if (PbrtOptions.quickRender) yres = std::max(1, yres / 4);
-    Bounds2f crop;
-    int cwi;
-    const Float *cr = params.FindFloat("cropwindow", &cwi);
-    if (cr && cwi == 4) {
-        crop.pMin.x = Clamp(std::min(cr[0], cr[1]), 0.f, 1.f);
-        crop.pMax.x = Clamp(std::max(cr[0], cr[1]), 0.f, 1.f);
-        crop.pMin.y = Clamp(std::min(cr[2], cr[3]), 0.f, 1.f);
-        crop.pMax.y = Clamp(std::max(cr[2], cr[3]), 0.f, 1.f);
-    } else if (cr)
-        Error("%d values supplied for \"cropwindow\". Expected 4.", cwi);
-    else
-        crop = Bounds2f(Point2f(Clamp(PbrtOptions.cropWindow[0][0], 0, 1),
-                                Clamp(PbrtOptions.cropWindow[1][0], 0, 1)),
-                        Point2f(Clamp(PbrtOptions.cropWindow[0][1], 0, 1),
-                                Clamp(PbrtOptions.cropWindow[1][1], 0, 1)));
-
-    Float scale = params.FindOneFloat("scale", 1.);
-    Float diagonal = params.FindOneFloat("diagonal", 35.);
-    Float maxSampleLuminance = params.FindOneFloat("maxsampleluminance",
-                                                   Infinity);
-    return new Film(Point2i(xres, yres), crop, std::move(filter), diagonal,
-                    filename, scale, maxSampleLuminance);
-}
 
 FilmTile::~FilmTile() {}
 

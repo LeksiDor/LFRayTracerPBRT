@@ -4,6 +4,8 @@
 
 #include "api.h"
 
+#include "Film.h"
+
 
 using namespace pbrt;
 
@@ -55,7 +57,7 @@ public:
     virtual SampleAccumulator* CreateDefaultSampleAccumulator(
         const Int& width, const Int& height ) const override
     {
-        return new DefaultSampleAccumulator();
+        return theFilm();
     }
 
     virtual bool Render( const RayGenerator& raygen, SampleGenerator& sampleGen,
@@ -111,48 +113,6 @@ bool DefaultSampleGenerator::ResetPixel( const Int& x, const Int& y )
 
 
 bool DefaultSampleGenerator::NextSample( Real& weight, VEC2& raster, VEC2& secondary, Real& time )
-{
-    return false;
-}
-
-
-bool DefaultSampleAccumulator::SetSize( const Int& width, const Int& height )
-{
-    m_Width = width;
-    m_Height = height;
-    return true;
-}
-
-
-bool DefaultSampleAccumulator::GetSize( Int& width, Int& height ) const
-{
-    width = m_Width;
-    height = m_Height;
-    return true;
-}
-
-
-SampleTile* DefaultSampleAccumulator::CreateSampleTile(
-    const Int& startX, const Int& startY, const Int& sizeX, const Int& sizeY )
-{
-    return nullptr;
-}
-
-
-bool DefaultSampleAccumulator::MergeSampleTile( SampleTile* tile )
-{
-    return false;
-}
-
-
-bool DefaultSampleAccumulator::DestroySampleTile( SampleTile* tile )
-{
-    return false;
-}
-
-
-bool DefaultSampleAccumulator::GetColor(
-    const Int& x, const Int& y, Real& r, Real& g, Real& b ) const
 {
     return false;
 }
