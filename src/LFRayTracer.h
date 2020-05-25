@@ -14,8 +14,17 @@ class SampleAccumulator;
 class LFRayTracer;
 class RayGenerator;
 
+#ifdef LFRT_REAL_AS_DOUBLE
 using Real = double;
+#else // LFRT_REAL_AS_DOUBLE
+using Real = float;
+#endif // LFRT_REAL_AS_DOUBLE
+
+#ifdef LFRT_INT_AS_LONG
+using Int = long int;
+#else // LFRT_INT_AS_LONG
 using Int = int;
+#endif // LFRT_INT_AS_LONG
 
 
 struct VEC2i { Int x; Int y; };
