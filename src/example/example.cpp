@@ -20,5 +20,7 @@ int main( int argc, char *argv[] )
 
     raytracer->LoadScene( argv[1] );
 
+    LFRayTRacerPBRTRelease();
+
     return 0;
 }
