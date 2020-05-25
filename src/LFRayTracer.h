@@ -4,9 +4,6 @@
 #include <string>
 
 
-#define LFRAYTRACER_IMPLEMENTATION
-
-
 namespace lfrt
 {
 

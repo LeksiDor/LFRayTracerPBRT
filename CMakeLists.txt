@@ -450,6 +450,8 @@ SET ( PBRT_CORE_HEADERS
   )
 
 FILE ( GLOB PBRT_SOURCE
+  src/*.h
+  src/*.cpp
   src/ext/*
   src/accelerators/*
   src/cameras/*
@@ -467,6 +469,7 @@ INCLUDE_DIRECTORIES ( src )
 INCLUDE_DIRECTORIES ( src/core )
 
 # Visual Studio source folders
+SOURCE_GROUP (common REGULAR_EXPRESSION src/.*)
 SOURCE_GROUP (core REGULAR_EXPRESSION src/core/.*)
 SOURCE_GROUP (ext REGULAR_EXPRESSION src/ext/.*)
 SOURCE_GROUP (accelerators REGULAR_EXPRESSION src/accelerators/.*)
