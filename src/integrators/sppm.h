@@ -42,7 +42,8 @@
 #include "pbrt.h"
 #include "integrator.h"
 #include "camera.h"
-#include "film.h"
+
+namespace lfrt { class SampleAccumulator; }
 
 namespace pbrt {
 
@@ -52,25 +53,18 @@ class SPPMIntegrator : public Integrator {
     // SPPMIntegrator Public Methods
     SPPMIntegrator(std::shared_ptr<const Camera> &camera, int nIterations,
                    int photonsPerIteration, int maxDepth,
-                   Float initialSearchRadius, int writeFrequency)
-        : camera(camera),
-          initialSearchRadius(initialSearchRadius),
-          nIterations(nIterations),
-          maxDepth(maxDepth),
-          photonsPerIteration(photonsPerIteration > 0
-                                  ? photonsPerIteration
-                                  : camera->film->croppedPixelBounds.Area()),
-          writeFrequency(writeFrequency) {}
+                   Float initialSearchRadius, int writeFrequency);
+        
     void Render(const Scene &scene);
 
   private:
     // SPPMIntegrator Private Data
     std::shared_ptr<const Camera> camera;
-    const Float initialSearchRadius;
-    const int nIterations;
-    const int maxDepth;
-    const int photonsPerIteration;
-    const int writeFrequency;
+    Float initialSearchRadius;
+    int nIterations;
+    int maxDepth;
+    int photonsPerIteration;
+    int writeFrequency;
 };
 
 Integrator *CreateSPPMIntegrator(const ParamSet &params,

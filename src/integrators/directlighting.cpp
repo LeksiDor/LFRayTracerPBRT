@@ -113,7 +113,10 @@ DirectLightingIntegrator *CreateDirectLightingIntegrator(
     }
     int np;
     const int *pb = params.FindInt("pixelbounds", &np);
-    Bounds2i pixelBounds = camera->film->GetSampleBounds();
+    Bounds2i pixelBounds;
+    camera->film->GetSamplingBounds(
+        pixelBounds.pMin.x, pixelBounds.pMin.y,
+        pixelBounds.pMax.x, pixelBounds.pMax.y );
     if (pb) {
         if (np != 4)
             Error("Expected four values for \"pixelbounds\" parameter. Got %d.",

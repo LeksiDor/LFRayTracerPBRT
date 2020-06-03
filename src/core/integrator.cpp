@@ -230,7 +230,10 @@ void SamplerIntegrator::Render(const Scene &scene) {
     // Render image tiles in parallel
 
     // Compute number of tiles, _nTiles_, to use for parallel rendering
-    Bounds2i sampleBounds = camera->film->GetSampleBounds();
+    Bounds2i sampleBounds;
+    camera->film->GetSamplingBounds(
+        sampleBounds.pMin.x, sampleBounds.pMin.y,
+        sampleBounds.pMax.x, sampleBounds.pMax.y );
     Vector2i sampleExtent = sampleBounds.Diagonal();
     const int tileSize = 16;
     Point2i nTiles((sampleExtent.x + tileSize - 1) / tileSize,
@@ -256,8 +259,12 @@ void SamplerIntegrator::Render(const Scene &scene) {
             LOG(INFO) << "Starting image tile " << tileBounds;
 
             // Get _FilmTile_ for tile
-            std::unique_ptr<FilmTile> filmTile =
-                camera->film->GetFilmTile(tileBounds);
+            //std::unique_ptr<FilmTile> filmTile =
+            //    camera->film->GetFilmTile(tileBounds);
+            lfrt::SampleTile* filmTile = camera->film->CreateSampleTile(
+                tileBounds.pMin.x, tileBounds.pMin.y,
+                tileBounds.pMax.x - tileBounds.pMin.x,
+                tileBounds.pMax.y - tileBounds.pMin.y );
 
             // Loop over pixels in tile to render them
             for (Point2i pixel : tileBounds) {
@@ -316,8 +323,13 @@ void SamplerIntegrator::Render(const Scene &scene) {
                     VLOG(1) << "Camera sample: " << cameraSample << " -> ray: " <<
                         ray << " -> L = " << L;
 
+                    Float rgb[3];
+                    L.ToRGB( rgb );
                     // Add camera ray's contribution to image
-                    filmTile->AddSample(cameraSample.pFilm, L, rayWeight);
+                    //filmTile->AddSample( cameraSample.pFilm, L, rayWeight );
+                    const lfrt::VEC2 raster = { cameraSample.pFilm.x, cameraSample.pFilm.y };
+                    const lfrt::VEC2 auxcoord = { cameraSample.pLens.x, cameraSample.pLens.y };
+                    filmTile->AddSample( raster, auxcoord, 1.0, rayWeight, rgb[0], rgb[1], rgb[2], true );
 
                     // Free _MemoryArena_ memory from computing image sample
                     // value
@@ -327,7 +339,9 @@ void SamplerIntegrator::Render(const Scene &scene) {
             LOG(INFO) << "Finished image tile " << tileBounds;
 
             // Merge image tile into _Film_
-            camera->film->MergeFilmTile(std::move(filmTile));
+            //camera->film->MergeFilmTile(std::move(filmTile));
+            camera->film->MergeSampleTile( filmTile );
+            camera->film->DestroySampleTile( filmTile );
             reporter.Update();
         }, nTiles);
         reporter.Done();

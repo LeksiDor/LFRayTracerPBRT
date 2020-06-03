@@ -54,8 +54,9 @@ public:
 // Should be used inside one thread.
 class SampleTile
 {
-public:
+protected:
 	virtual ~SampleTile() = default;
+public:
 	virtual bool AddSample(
 		const VEC2& raster,
 		const VEC2& secondary,
@@ -72,9 +73,12 @@ class SampleAccumulator
 public:
 	virtual ~SampleAccumulator() = default;
 	virtual bool SetSize( const Int& width, const Int& height ) = 0;
-    //virtual bool GetSize( Int& width, Int& height ) const = 0;
 	virtual Int Width() const = 0;
 	virtual Int Height() const = 0;
+	// Region of pixels being written.
+	virtual bool GetRenderBounds( Int& startX, Int& startY, Int& endX, Int& endY ) const = 0;
+	// Region of pixels which affects RenderBounds. Should be greater or equal.
+	virtual bool GetSamplingBounds( Int& startX, Int& startY, Int& endX, Int& endY ) const = 0;
 	virtual SampleTile* CreateSampleTile( const Int& startX, const Int& startY, const Int& sizeX, const Int& sizeY ) = 0;
     virtual bool MergeSampleTile(SampleTile* tile) = 0;
 	virtual bool DestroySampleTile( SampleTile* tile ) = 0;

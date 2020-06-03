@@ -45,6 +45,8 @@
 #include "samplers/halton.h"
 #include "stats.h"
 
+#include "LFRayTracer.h"
+
 namespace pbrt {
 
 STAT_RATIO(
@@ -107,11 +109,35 @@ inline unsigned int hash(const Point3i &p, int hashSize) {
            hashSize;
 }
 
+SPPMIntegrator::SPPMIntegrator(
+    std::shared_ptr<const Camera> &camera,
+    int nIterations, int photonsPerIteration,
+    int maxDepth, Float initialSearchRadius,
+    int writeFrequency )
+    :camera(camera)
+    ,initialSearchRadius(initialSearchRadius)
+    ,nIterations(nIterations)
+    ,maxDepth(maxDepth)
+    ,writeFrequency(writeFrequency) 
+{
+    if ( photonsPerIteration > 0 )
+        this->photonsPerIteration = photonsPerIteration;
+    else
+    {
+        Bounds2i bounds;
+        camera->film->GetRenderBounds( bounds.pMin.x, bounds.pMin.y, bounds.pMax.x, bounds.pMax.y );
+        this->photonsPerIteration = bounds.Area();
+    }
+}
+
 // SPPM Method Definitions
 void SPPMIntegrator::Render(const Scene &scene) {
     ProfilePhase p(Prof::IntegratorRender);
     // Initialize _pixelBounds_ and _pixels_ array for SPPM
-    Bounds2i pixelBounds = camera->film->croppedPixelBounds;
+    Bounds2i pixelBounds;
+    camera->film->GetRenderBounds(
+        pixelBounds.pMin.x, pixelBounds.pMin.y,
+        pixelBounds.pMax.x, pixelBounds.pMax.y );
     int nPixels = pixelBounds.Area();
     std::unique_ptr<SPPMPixel[]> pixels(new SPPMPixel[nPixels]);
     for (int i = 0; i < nPixels; ++i) pixels[i].radius = initialSearchRadius;
@@ -459,8 +485,13 @@ void SPPMIntegrator::Render(const Scene &scene) {
                     image[offset++] = L;
                 }
             }
+            // ToDo: Update for current Film interface.
+#if 0
             camera->film->SetImage(image.get());
-            //camera->film->WriteImage();
+            camera->film->WriteImage();
+#else
+            Error("SPPM currently does not support updated Film interface.");
+#endif
             // Write SPPM radius image, if requested
             if (getenv("SPPM_RADIUS")) {
                 std::unique_ptr<Float[]> rimg(

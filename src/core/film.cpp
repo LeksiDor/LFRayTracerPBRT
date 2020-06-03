@@ -50,14 +50,83 @@ Film::~Film() {}
 bool Film::SetSize(const int &width, const int &height) { return false; }
 
 
-lfrt::SampleTile *Film::CreateSampleTile(const int &startX, const int &startY,
-                                         const int &sizeX, const int &sizeY) {
-    return nullptr;
+bool Film::GetRenderBounds( int &startX, int &startY, int &endX, int &endY ) const
+{
+    startX = croppedPixelBounds.pMin.x;
+    startY = croppedPixelBounds.pMin.y;
+    endX   = croppedPixelBounds.pMax.x;
+    endY   = croppedPixelBounds.pMax.y;
+    return true;
 }
 
-bool Film::MergeSampleTile(lfrt::SampleTile *tile) { return false; }
 
-bool Film::DestroySampleTile(lfrt::SampleTile *tile) { return false; }
+bool Film::GetSamplingBounds( int &startX, int &startY, int &endX, int &endY ) const
+{
+    startX = std::floor(croppedPixelBounds.pMin.x) + 0.5 - filter->radius.x;
+    startY = std::floor(croppedPixelBounds.pMin.y) + 0.5 - filter->radius.y;
+    endX   = std::ceil( croppedPixelBounds.pMax.x) - 0.5 + filter->radius.x;
+    endY   = std::ceil( croppedPixelBounds.pMax.y) - 0.5 + filter->radius.y;
+    return true;
+}
+
+
+lfrt::SampleTile *Film::CreateSampleTile(
+    const int &startX, const int &startY, const int &sizeX, const int &sizeY )
+{
+    // Bound image pixels that samples in _sampleBounds_ contribute to
+    Vector2f halfPixel = Vector2f( 0.5f, 0.5f );
+    const Bounds2i sampleBounds( Point2i(startX,startY), Point2i(startX+sizeX,startY+sizeY) );
+    Bounds2f floatBounds = (Bounds2f)sampleBounds;
+    Point2i p0 = (Point2i)Ceil(floatBounds.pMin - halfPixel - filter->radius);
+    Point2i p1 = (Point2i)Floor(floatBounds.pMax - halfPixel + filter->radius) + Point2i(1, 1);
+    Bounds2i tilePixelBounds = Intersect(Bounds2i(p0, p1), croppedPixelBounds);
+
+    FilmTile* tile = new FilmTile( tilePixelBounds, filter->radius, filterTable,
+                     filterTableWidth, maxSampleLuminance);
+    tiles.insert(tile);
+
+    return tile;
+}
+
+
+bool Film::MergeSampleTile( lfrt::SampleTile *tile )
+{
+    // Original PBRT-v3 function:
+    // void Film::MergeFilmTile(std::unique_ptr<FilmTile> tile)
+    ProfilePhase p(Prof::MergeFilmTile);
+    FilmTile *filmTile = dynamic_cast<FilmTile*>(tile);
+    if ( filmTile == nullptr )
+        return false;
+    VLOG(1) << "Merging film tile " << filmTile->pixelBounds;
+    std::lock_guard<std::mutex> lock(mutex);
+    for ( Point2i pixel : filmTile->GetPixelBounds() ) {
+        // Merge _pixel_ into _Film::pixels_
+        const FilmTilePixel &tilePixel = filmTile->GetPixel(pixel);
+        Pixel &mergePixel = GetPixel(pixel);
+        Float xyz[3];
+        tilePixel.contribSum.ToXYZ(xyz);
+        for (int i = 0; i < 3; ++i) mergePixel.xyz[i] += xyz[i];
+        mergePixel.filterWeightSum += tilePixel.filterWeightSum;
+        Float xyzSplat[3];
+        tilePixel.splats.ToXYZ(xyzSplat);
+        for (int i = 0; i < 3; ++i) mergePixel.splatXYZ[i].Add( xyz[i] );
+    }
+    return false;
+}
+
+
+bool Film::DestroySampleTile( lfrt::SampleTile *tile )
+{
+    FilmTile* filmTile = dynamic_cast<FilmTile*>(tile);
+    if ( filmTile == nullptr )
+        return false;
+    if ( tiles.find(filmTile) == tiles.end() )
+        return false;
+    tiles.erase( filmTile );
+    delete filmTile;
+    return true;
+}
+
 
 bool Film::GetColor( const int &x, const int &y, Float &r, Float &g, Float &b ) const
 {
@@ -159,13 +228,13 @@ bool Film::Initialize( const ParamSet &params, std::unique_ptr<Filter> filt )
     return true;
 }
 
-Bounds2i Film::GetSampleBounds() const {
-    Bounds2f floatBounds(Floor(Point2f(croppedPixelBounds.pMin) +
-                               Vector2f(0.5f, 0.5f) - filter->radius),
-                         Ceil(Point2f(croppedPixelBounds.pMax) -
-                              Vector2f(0.5f, 0.5f) + filter->radius));
-    return (Bounds2i)floatBounds;
-}
+//Bounds2i Film::GetSampleBounds() const {
+//    Bounds2f floatBounds(Floor(Point2f(croppedPixelBounds.pMin) +
+//                               Vector2f(0.5f, 0.5f) - filter->radius),
+//                         Ceil(Point2f(croppedPixelBounds.pMax) -
+//                              Vector2f(0.5f, 0.5f) + filter->radius));
+//    return (Bounds2i)floatBounds;
+//}
 
 Bounds2f Film::GetPhysicalExtent() const {
     Float aspect = (Float)fullResolution.y / (Float)fullResolution.x;
@@ -174,18 +243,18 @@ Bounds2f Film::GetPhysicalExtent() const {
     return Bounds2f(Point2f(-x / 2, -y / 2), Point2f(x / 2, y / 2));
 }
 
-std::unique_ptr<FilmTile> Film::GetFilmTile(const Bounds2i &sampleBounds) {
-    // Bound image pixels that samples in _sampleBounds_ contribute to
-    Vector2f halfPixel = Vector2f(0.5f, 0.5f);
-    Bounds2f floatBounds = (Bounds2f)sampleBounds;
-    Point2i p0 = (Point2i)Ceil(floatBounds.pMin - halfPixel - filter->radius);
-    Point2i p1 = (Point2i)Floor(floatBounds.pMax - halfPixel + filter->radius) +
-                 Point2i(1, 1);
-    Bounds2i tilePixelBounds = Intersect(Bounds2i(p0, p1), croppedPixelBounds);
-    return std::unique_ptr<FilmTile>(new FilmTile(
-        tilePixelBounds, filter->radius, filterTable, filterTableWidth,
-        maxSampleLuminance));
-}
+//std::unique_ptr<FilmTile> Film::GetFilmTile(const Bounds2i &sampleBounds) {
+//    // Bound image pixels that samples in _sampleBounds_ contribute to
+//    Vector2f halfPixel = Vector2f(0.5f, 0.5f);
+//    Bounds2f floatBounds = (Bounds2f)sampleBounds;
+//    Point2i p0 = (Point2i)Ceil(floatBounds.pMin - halfPixel - filter->radius);
+//    Point2i p1 = (Point2i)Floor(floatBounds.pMax - halfPixel + filter->radius) +
+//                 Point2i(1, 1);
+//    Bounds2i tilePixelBounds = Intersect(Bounds2i(p0, p1), croppedPixelBounds);
+//    return std::unique_ptr<FilmTile>(new FilmTile(
+//        tilePixelBounds, filter->radius, filterTable, filterTableWidth,
+//        maxSampleLuminance));
+//}
 
 void Film::Clear() {
     for (Point2i p : croppedPixelBounds) {
@@ -196,20 +265,20 @@ void Film::Clear() {
     }
 }
 
-void Film::MergeFilmTile(std::unique_ptr<FilmTile> tile) {
-    ProfilePhase p(Prof::MergeFilmTile);
-    VLOG(1) << "Merging film tile " << tile->pixelBounds;
-    std::lock_guard<std::mutex> lock(mutex);
-    for (Point2i pixel : tile->GetPixelBounds()) {
-        // Merge _pixel_ into _Film::pixels_
-        const FilmTilePixel &tilePixel = tile->GetPixel(pixel);
-        Pixel &mergePixel = GetPixel(pixel);
-        Float xyz[3];
-        tilePixel.contribSum.ToXYZ(xyz);
-        for (int i = 0; i < 3; ++i) mergePixel.xyz[i] += xyz[i];
-        mergePixel.filterWeightSum += tilePixel.filterWeightSum;
-    }
-}
+//void Film::MergeFilmTile(std::unique_ptr<FilmTile> tile) {
+//    ProfilePhase p(Prof::MergeFilmTile);
+//    VLOG(1) << "Merging film tile " << tile->pixelBounds;
+//    std::lock_guard<std::mutex> lock(mutex);
+//    for (Point2i pixel : tile->GetPixelBounds()) {
+//        // Merge _pixel_ into _Film::pixels_
+//        const FilmTilePixel &tilePixel = tile->GetPixel(pixel);
+//        Pixel &mergePixel = GetPixel(pixel);
+//        Float xyz[3];
+//        tilePixel.contribSum.ToXYZ(xyz);
+//        for (int i = 0; i < 3; ++i) mergePixel.xyz[i] += xyz[i];
+//        mergePixel.filterWeightSum += tilePixel.filterWeightSum;
+//    }
+//}
 
 void Film::SetImage(const Spectrum *img) const {
     int nPixels = croppedPixelBounds.Area();
@@ -221,32 +290,32 @@ void Film::SetImage(const Spectrum *img) const {
     }
 }
 
-void Film::AddSplat(const Point2f &p, Spectrum v) {
-    ProfilePhase pp(Prof::SplatFilm);
-
-    if (v.HasNaNs()) {
-        LOG(ERROR) << StringPrintf("Ignoring splatted spectrum with NaN values "
-                                   "at (%f, %f)", p.x, p.y);
-        return;
-    } else if (v.y() < 0.) {
-        LOG(ERROR) << StringPrintf("Ignoring splatted spectrum with negative "
-                                   "luminance %f at (%f, %f)", v.y(), p.x, p.y);
-        return;
-    } else if (std::isinf(v.y())) {
-        LOG(ERROR) << StringPrintf("Ignoring splatted spectrum with infinite "
-                                   "luminance at (%f, %f)", p.x, p.y);
-        return;
-    }
-
-    Point2i pi = Point2i(Floor(p));
-    if (!InsideExclusive(pi, croppedPixelBounds)) return;
-    if (v.y() > maxSampleLuminance)
-        v *= maxSampleLuminance / v.y();
-    Float xyz[3];
-    v.ToXYZ(xyz);
-    Pixel &pixel = GetPixel(pi);
-    for (int i = 0; i < 3; ++i) pixel.splatXYZ[i].Add(xyz[i]);
-}
+//void Film::AddSplat(const Point2f &p, Spectrum v) {
+//    ProfilePhase pp(Prof::SplatFilm);
+//
+//    if (v.HasNaNs()) {
+//        LOG(ERROR) << StringPrintf("Ignoring splatted spectrum with NaN values "
+//                                   "at (%f, %f)", p.x, p.y);
+//        return;
+//    } else if (v.y() < 0.) {
+//        LOG(ERROR) << StringPrintf("Ignoring splatted spectrum with negative "
+//                                   "luminance %f at (%f, %f)", v.y(), p.x, p.y);
+//        return;
+//    } else if (std::isinf(v.y())) {
+//        LOG(ERROR) << StringPrintf("Ignoring splatted spectrum with infinite "
+//                                   "luminance at (%f, %f)", p.x, p.y);
+//        return;
+//    }
+//
+//    Point2i pi = Point2i(Floor(p));
+//    if (!InsideExclusive(pi, croppedPixelBounds)) return;
+//    if (v.y() > maxSampleLuminance)
+//        v *= maxSampleLuminance / v.y();
+//    Float xyz[3];
+//    v.ToXYZ(xyz);
+//    Pixel &pixel = GetPixel(pi);
+//    for (int i = 0; i < 3; ++i) pixel.splatXYZ[i].Add(xyz[i]);
+//}
 
 
 FilmTile::~FilmTile() {}
@@ -256,6 +325,83 @@ bool FilmTile::AddSample(const lfrt::VEC2 &raster, const lfrt::VEC2 &secondary,
                          const Float &r, const Float &g, const Float &b,
                          const bool isWeighted )
 {
+    const Float rgb[3] = { r, g, b };
+    Spectrum color = Spectrum::FromRGB( rgb );
+    if ( color.y() > maxSampleLuminance )
+            color *= maxSampleLuminance / color.y();
+    const Point2f pFilm( raster.x, raster.y );
+    if ( isWeighted )
+    {
+        // Original PBRT-v3 function:
+        // void AddSample(const Point2f &pFilm, Spectrum L, Float sampleWeight = 1.)
+        ProfilePhase _( Prof::AddFilmSample );
+
+        // Compute sample's raster bounds
+        Point2f pFilmDiscrete = pFilm - Vector2f(0.5f, 0.5f);
+        Point2i p0 = (Point2i)Ceil(pFilmDiscrete - filterRadius);
+        Point2i p1 = (Point2i)Floor(pFilmDiscrete + filterRadius) + Point2i(1, 1);
+        p0 = Max(p0, pixelBounds.pMin);
+        p1 = Min(p1, pixelBounds.pMax);
+
+        // Loop over filter support and add sample to pixel arrays
+
+        // Precompute $x$ and $y$ filter table offsets
+        int *ifx = ALLOCA(int, p1.x - p0.x);
+        for (int x = p0.x; x < p1.x; ++x) {
+            Float fx = std::abs( (x - pFilmDiscrete.x) * invFilterRadius.x * filterTableSize );
+            ifx[x - p0.x] = std::min( (int)std::floor(fx), filterTableSize-1 );
+        }
+        int *ify = ALLOCA(int, p1.y - p0.y);
+        for (int y = p0.y; y < p1.y; ++y) {
+            Float fy = std::abs( (y - pFilmDiscrete.y) * invFilterRadius.y * filterTableSize );
+            ify[y - p0.y] = std::min( (int)std::floor(fy), filterTableSize-1 );
+        }
+        for (int y = p0.y; y < p1.y; ++y) {
+            for (int x = p0.x; x < p1.x; ++x) {
+                // Evaluate filter value at $(x,y)$ pixel
+                int offset = ify[y - p0.y] * filterTableSize + ifx[x - p0.x];
+                Float filterWeight = filterTable[offset];
+
+                // Update pixel values with filtered sample contribution
+                FilmTilePixel &pixel = GetPixel(Point2i(x, y));
+                pixel.contribSum += color * sampleWeight * filterWeight;
+                pixel.filterWeightSum += filterWeight;
+            }
+        }
+        return true;
+    }
+    else
+    {
+        // Original PBRT-v3 function:
+        // void Film::AddSplat(const Point2f &p, Spectrum v)
+        ProfilePhase pp( Prof::SplatFilm );
+        if ( color.HasNaNs() ) {
+            LOG(ERROR) << StringPrintf("Ignoring splatted spectrum with NaN values "
+                                       "at (%f, %f)", pFilm.x, pFilm.y);
+            return false;
+        } else if ( color.y() < 0. ) {
+            LOG(ERROR) << StringPrintf("Ignoring splatted spectrum with negative "
+                                       "luminance %f at (%f, %f)", color.y(), pFilm.x, pFilm.y);
+            return false;
+        } else if ( std::isinf(color.y()) ) {
+            LOG(ERROR) << StringPrintf("Ignoring splatted spectrum with infinite "
+                                       "luminance at (%f, %f)", pFilm.x, pFilm.y);
+            return false;
+        }
+        //Point2i pi = Point2i(Floor(p));
+        Point2i pi = Point2i( Floor(pFilm) );
+        //if (!InsideExclusive(pi, croppedPixelBounds)) return;
+        pi = Min( Max( pi, pixelBounds.pMin ), pixelBounds.pMax );
+        Float xyz[3];
+        color.ToXYZ(xyz);
+        FilmTilePixel &pixel = GetPixel(pi);
+        //for (int i = 0; i < 3; ++i) pixel.splatXYZ[i].Add(xyz[i]);
+        //pixel.contribSum += color * sampleWeight;
+        //pixel.filterWeightSum += 1.0;
+        pixel.splats += color;
+        return true;
+    }
+
     return false;
 }
 

@@ -41,7 +41,7 @@
 // cameras/perspective.h*
 #include "pbrt.h"
 #include "camera.h"
-#include "film.h"
+//#include "film.h"
 
 namespace pbrt {
 
@@ -49,13 +49,12 @@ namespace pbrt {
 class PerspectiveCamera : public ProjectiveCamera {
   public:
     // PerspectiveCamera Public Methods
-    PerspectiveCamera(const AnimatedTransform &CameraToWorld,
-                      const Bounds2f &screenWindow, Float shutterOpen,
-                      Float shutterClose, Float lensRadius, Float focalDistance,
-                      Float fov, Film *film, const Medium *medium);
+    PerspectiveCamera(
+        const AnimatedTransform &CameraToWorld, const Bounds2f &screenWindow,
+        Float shutterOpen, Float shutterClose, Float lensRadius, Float focalDistance,
+        Float fov, lfrt::SampleAccumulator *film, const Medium *medium);
     Float GenerateRay(const CameraSample &sample, Ray *) const;
-    Float GenerateRayDifferential(const CameraSample &sample,
-                                  RayDifferential *ray) const;
+    Float GenerateRayDifferential( const CameraSample &sample, RayDifferential *ray ) const;
     Spectrum We(const Ray &ray, Point2f *pRaster2 = nullptr) const;
     void Pdf_We(const Ray &ray, Float *pdfPos, Float *pdfDir) const;
     Spectrum Sample_Wi(const Interaction &ref, const Point2f &sample,
@@ -68,9 +67,9 @@ class PerspectiveCamera : public ProjectiveCamera {
     Float A;
 };
 
-PerspectiveCamera *CreatePerspectiveCamera(const ParamSet &params,
-                                           const AnimatedTransform &cam2world,
-                                           Film *film, const Medium *medium);
+PerspectiveCamera *CreatePerspectiveCamera(
+    const ParamSet &params, const AnimatedTransform &cam2world,
+    lfrt::SampleAccumulator *film, const Medium *medium );
 
 }  // namespace pbrt
 

@@ -142,8 +142,11 @@ Spectrum MLTIntegrator::L(const Scene &scene, MemoryArena &arena,
 
     // Generate a camera subpath with exactly _t_ vertices
     Vertex *cameraVertices = arena.Alloc<Vertex>(t);
-    Bounds2f sampleBounds = (Bounds2f)camera->film->GetSampleBounds();
-    *pRaster = sampleBounds.Lerp(sampler.Get2D());
+    Bounds2i sampleBounds;
+    camera->film->GetSamplingBounds(
+        sampleBounds.pMin.x, sampleBounds.pMin.y,
+        sampleBounds.pMax.x, sampleBounds.pMax.y );
+    *pRaster = ((Bounds2f)sampleBounds).Lerp(sampler.Get2D());
     if (GenerateCameraSubpath(scene, sampler, arena, t, *camera, *pRaster,
                               cameraVertices) != t)
         return Spectrum(0.f);
@@ -202,13 +205,15 @@ void MLTIntegrator::Render(const Scene &scene) {
     Float b = bootstrap.funcInt * (maxDepth + 1);
 
     // Run _nChains_ Markov chains in parallel
-    Film &film = *camera->film;
-    int64_t nTotalMutations =
-        (int64_t)mutationsPerPixel * (int64_t)film.GetSampleBounds().Area();
+    lfrt::SampleAccumulator& film = *camera->film;
+    Bounds2i pixelBounds;
+    film.GetSamplingBounds(
+        pixelBounds.pMin.x, pixelBounds.pMin.y,
+        pixelBounds.pMax.x, pixelBounds.pMax.y );
+    int64_t nTotalMutations = (int64_t)mutationsPerPixel * (int64_t)pixelBounds.Area();
     if (scene.lights.size() > 0) {
         const int progressFrequency = 32768;
-        ProgressReporter progress(nTotalMutations / progressFrequency,
-                                  "Rendering");
+        ProgressReporter progress(nTotalMutations / progressFrequency, "Rendering");
         ParallelFor([&](int i) {
             int64_t nChainMutations =
                 std::min((i + 1) * nTotalMutations / nChains, nTotalMutations) -
@@ -237,11 +242,16 @@ void MLTIntegrator::Render(const Scene &scene) {
                 // Compute acceptance probability for proposed sample
                 Float accept = std::min((Float)1, LProposed.y() / LCurrent.y());
 
+                // ToDo: Update to current Film interface.
+#if 0
                 // Splat both current and proposed samples to _film_
-                if (accept > 0)
-                    film.AddSplat(pProposed,
-                                  LProposed * accept / LProposed.y());
+                if (accept > 0) {
+                    film.AddSplat(pProposed, LProposed * accept / LProposed.y());
+                }
                 film.AddSplat(pCurrent, LCurrent * (1 - accept) / LCurrent.y());
+#else
+                Error("MTL integrator currently does not support updated Film interface.");
+#endif
 
                 // Accept or reject the proposal
                 if (rng.UniformFloat() < accept) {

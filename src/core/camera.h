@@ -42,7 +42,10 @@
 #include "pbrt.h"
 #include "geometry.h"
 #include "transform.h"
-#include "film.h"
+//#include "film.h"
+#include "spectrum.h"
+
+namespace lfrt { class SampleAccumulator; }
 
 namespace pbrt {
 
@@ -50,8 +53,8 @@ namespace pbrt {
 class Camera {
   public:
     // Camera Interface
-    Camera(const AnimatedTransform &CameraToWorld, Float shutterOpen,
-           Float shutterClose, Film *film, const Medium *medium);
+    Camera( const AnimatedTransform &CameraToWorld, Float shutterOpen,
+           Float shutterClose, lfrt::SampleAccumulator *film, const Medium *medium );
     virtual ~Camera();
     virtual Float GenerateRay(const CameraSample &sample, Ray *ray) const = 0;
     virtual Float GenerateRayDifferential(const CameraSample &sample,
@@ -65,7 +68,7 @@ class Camera {
     // Camera Public Data
     AnimatedTransform CameraToWorld;
     const Float shutterOpen, shutterClose;
-    Film *film;
+    lfrt::SampleAccumulator *film;
     const Medium *medium;
 };
 
@@ -84,28 +87,11 @@ inline std::ostream &operator<<(std::ostream &os, const CameraSample &cs) {
 class ProjectiveCamera : public Camera {
   public:
     // ProjectiveCamera Public Methods
-    ProjectiveCamera(const AnimatedTransform &CameraToWorld,
-                     const Transform &CameraToScreen,
-                     const Bounds2f &screenWindow, Float shutterOpen,
-                     Float shutterClose, Float lensr, Float focald, Film *film,
-                     const Medium *medium)
-        : Camera(CameraToWorld, shutterOpen, shutterClose, film, medium),
-          CameraToScreen(CameraToScreen) {
-        // Initialize depth of field parameters
-        lensRadius = lensr;
-        focalDistance = focald;
-
-        // Compute projective camera transformations
-
-        // Compute projective camera screen transformations
-        ScreenToRaster =
-            Scale( film->Width(), film->Height(), 1) *
-            Scale(1 / (screenWindow.pMax.x - screenWindow.pMin.x),
-                  1 / (screenWindow.pMin.y - screenWindow.pMax.y), 1) *
-            Translate(Vector3f(-screenWindow.pMin.x, -screenWindow.pMax.y, 0));
-        RasterToScreen = Inverse(ScreenToRaster);
-        RasterToCamera = Inverse(CameraToScreen) * RasterToScreen;
-    }
+    ProjectiveCamera(
+        const AnimatedTransform &CameraToWorld, const Transform &CameraToScreen,
+        const Bounds2f &screenWindow, Float shutterOpen, Float shutterClose,
+        Float lensr, Float focald, lfrt::SampleAccumulator* film,
+        const Medium *medium );
 
   protected:
     // ProjectiveCamera Protected Data

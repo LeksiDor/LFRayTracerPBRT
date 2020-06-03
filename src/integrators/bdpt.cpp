@@ -312,8 +312,11 @@ void BDPTIntegrator::Render(const Scene &scene) {
         lightToIndex[scene.lights[i].get()] = i;
 
     // Partition the image into tiles
-    Film *film = camera->film;
-    const Bounds2i sampleBounds = film->GetSampleBounds();
+    lfrt::SampleAccumulator *film = camera->film;
+    Bounds2i sampleBounds;
+    camera->film->GetRenderBounds(
+        sampleBounds.pMin.x, sampleBounds.pMin.y,
+        sampleBounds.pMax.x, sampleBounds.pMax.y );
     const Vector2i sampleExtent = sampleBounds.Diagonal();
     const int tileSize = 16;
     const int nXTiles = (sampleExtent.x + tileSize - 1) / tileSize;
@@ -356,8 +359,12 @@ void BDPTIntegrator::Render(const Scene &scene) {
             Bounds2i tileBounds(Point2i(x0, y0), Point2i(x1, y1));
             LOG(INFO) << "Starting image tile " << tileBounds;
 
-            std::unique_ptr<FilmTile> filmTile =
-                camera->film->GetFilmTile(tileBounds);
+            //std::unique_ptr<FilmTile> filmTile =
+            //    camera->film->GetFilmTile(tileBounds);
+            lfrt::SampleTile* filmTile = camera->film->CreateSampleTile(
+                tileBounds.pMin.x, tileBounds.pMin.y,
+                tileBounds.pMax.x - tileBounds.pMin.x,
+                tileBounds.pMax.y - tileBounds.pMin.y );
             for (Point2i pPixel : tileBounds) {
                 tileSampler->StartPixel(pPixel);
                 if (!InsideExclusive(pPixel, pixelBounds))
@@ -417,17 +424,30 @@ void BDPTIntegrator::Render(const Scene &scene) {
                             }
                             if (t != 1)
                                 L += Lpath;
-                            else
-                                film->AddSplat(pFilmNew, Lpath);
+                            else {
+                                //film->AddSplat(pFilmNew, Lpath);
+                                Float rgb[3];
+                                L.ToRGB( rgb );
+                                const lfrt::VEC2 raster = { pFilmNew.x, pFilmNew.y };
+                                const lfrt::VEC2 auxcoord = { 0.5, 0.5 };
+                                filmTile->AddSample( raster, auxcoord, 1.0, 1.0, rgb[0], rgb[1], rgb[2], false );
+                            }
                         }
                     }
                     VLOG(2) << "Add film sample pFilm: " << pFilm << ", L: " << L <<
                         ", (y: " << L.y() << ")";
-                    filmTile->AddSample(pFilm, L);
+                    //filmTile->AddSample(pFilm, L);
+                    Float rgb[3];
+                    L.ToRGB( rgb );
+                    const lfrt::VEC2 raster = { pFilm.x, pFilm.y };
+                    const lfrt::VEC2 auxcoord = { 0.5, 0.5 };
+                    filmTile->AddSample( raster, auxcoord, 1.0, 1.0, rgb[0], rgb[1], rgb[2], true );
                     arena.Reset();
                 } while (tileSampler->StartNextSample());
             }
-            film->MergeFilmTile(std::move(filmTile));
+            //film->MergeFilmTile(std::move(filmTile));
+            camera->film->MergeSampleTile(filmTile);
+            camera->film->DestroySampleTile(filmTile);
             reporter.Update();
             LOG(INFO) << "Finished image tile " << tileBounds;
         }, Point2i(nXTiles, nYTiles));
@@ -552,7 +572,10 @@ BDPTIntegrator *CreateBDPTIntegrator(const ParamSet &params,
     }
     int np;
     const int *pb = params.FindInt("pixelbounds", &np);
-    Bounds2i pixelBounds = camera->film->GetSampleBounds();
+    Bounds2i pixelBounds;
+    camera->film->GetSamplingBounds(
+        pixelBounds.pMin.x, pixelBounds.pMin.y,
+        pixelBounds.pMax.x, pixelBounds.pMax.y );
     if (pb) {
         if (np != 4)
             Error("Expected four values for \"pixelbounds\" parameter. Got %d.",

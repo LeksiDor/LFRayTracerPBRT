@@ -42,6 +42,10 @@
 #include "lowdiscrepancy.h"
 #include <array>
 
+#include "LFRayTracer.h"
+#include "film.h"
+
+
 namespace pbrt {
 
 STAT_PERCENT("Camera/Rays vignetted by lens system", vignettedRays, totalRays);
@@ -51,10 +55,16 @@ RealisticCamera::RealisticCamera(const AnimatedTransform &CameraToWorld,
                                  Float shutterOpen, Float shutterClose,
                                  Float apertureDiameter, Float focusDistance,
                                  bool simpleWeighting,
-                                 std::vector<Float> &lensData, Film *film,
-                                 const Medium *medium)
-    : Camera(CameraToWorld, shutterOpen, shutterClose, film, medium),
-      simpleWeighting(simpleWeighting) {
+                                 std::vector<Float> &lensData,
+                                 lfrt::SampleAccumulator *pfilm,
+                                 const Medium *medium )
+    :Camera(CameraToWorld, shutterOpen, shutterClose, pfilm, medium)
+    ,simpleWeighting(simpleWeighting)
+{
+    Film *film = dynamic_cast<Film*>(pfilm);
+    if ( film == nullptr )
+        Error( "Realistic camera does not support custom SampleAccumulator." );
+
     for (int i = 0; i < (int)lensData.size(); i += 4) {
         if (lensData[i] == 0) {
             if (apertureDiameter > lensData[i + 3]) {
@@ -434,10 +444,11 @@ void RealisticCamera::ComputeCardinalPoints(const Ray &rIn, const Ray &rOut,
     *pz = -rOut(tp).z;
 }
 
-void RealisticCamera::ComputeThickLensApproximation(Float pz[2],
-                                                    Float fz[2]) const {
+void RealisticCamera::ComputeThickLensApproximation( Float pz[2], Float fz[2] ) const
+{
+    Film *film1 = dynamic_cast<Film*>(film);
     // Find height $x$ from optical axis for parallel rays
-    Float x = .001 * film->Diagonal();
+    Float x = .001 * film1->Diagonal();
 
     // Compute cardinal points for film side of lens system
     Ray rScene(Point3f(x, 0, LensFrontZ() + 1), Vector3f(0, 0, -1));
@@ -493,8 +504,9 @@ Float RealisticCamera::FocusBinarySearch(Float focusDistance) {
 }
 
 Float RealisticCamera::FocusDistance(Float filmDistance) {
+    Film *film1 = dynamic_cast<Film*>(film);
     // Find offset ray from film center through lens
-    Bounds2f bounds = BoundExitPupil(0, .001 * film->Diagonal() );
+    Bounds2f bounds = BoundExitPupil(0, .001 * film1->Diagonal() );
 
     const std::array<Float, 3> scaleFactors = {0.1f, 0.01f, 0.001f};
     Float lu = 0.0f;
@@ -610,12 +622,13 @@ void RealisticCamera::RenderExitPupil(Float sx, Float sy,
     delete[] image;
 }
 
-Point3f RealisticCamera::SampleExitPupil(const Point2f &pFilm,
-                                         const Point2f &lensSample,
-                                         Float *sampleBoundsArea) const {
+Point3f RealisticCamera::SampleExitPupil(
+    const Point2f &pFilm, const Point2f &lensSample, Float *sampleBoundsArea) const
+{
+    Film *film1 = dynamic_cast<Film*>(film);
     // Find exit pupil bound for sample distance from film center
     Float rFilm = std::sqrt(pFilm.x * pFilm.x + pFilm.y * pFilm.y);
-    int rIndex = rFilm / (film->Diagonal() / 2) * exitPupilBounds.size();
+    int rIndex = rFilm / (film1->Diagonal() / 2) * exitPupilBounds.size();
     rIndex = std::min((int)exitPupilBounds.size() - 1, rIndex);
     Bounds2f pupilBounds = exitPupilBounds[rIndex];
     if (sampleBoundsArea) *sampleBoundsArea = pupilBounds.Area();
@@ -630,8 +643,11 @@ Point3f RealisticCamera::SampleExitPupil(const Point2f &pFilm,
                    sinTheta * pLens.x + cosTheta * pLens.y, LensRearZ());
 }
 
-void RealisticCamera::TestExitPupilBounds() const {
-    Float filmDiagonal = film->Diagonal();
+void RealisticCamera::TestExitPupilBounds() const
+{
+    Film *film1 = dynamic_cast<Film*>(film);
+
+    Float filmDiagonal = film1->Diagonal();
 
     static RNG rng;
 
@@ -676,13 +692,15 @@ void RealisticCamera::TestExitPupilBounds() const {
     fprintf(stderr, ".");
 }
 
-Float RealisticCamera::GenerateRay(const CameraSample &sample, Ray *ray) const {
+Float RealisticCamera::GenerateRay(const CameraSample &sample, Ray *ray) const
+{
+    Film* film1 = dynamic_cast<Film*>(film);
     ProfilePhase prof(Prof::GenerateCameraRay);
     ++totalRays;
     // Find point on film, _pFilm_, corresponding to _sample.pFilm_
     Point2f s(sample.pFilm.x / film->Width(),
               sample.pFilm.y / film->Height());
-    Point2f pFilm2 = film->GetPhysicalExtent().Lerp(s);
+    Point2f pFilm2 = film1->GetPhysicalExtent().Lerp(s);
     Point3f pFilm(-pFilm2.x, pFilm2.y, 0);
 
     // Trace ray from _pFilm_ through lens system
@@ -711,9 +729,13 @@ Float RealisticCamera::GenerateRay(const CameraSample &sample, Ray *ray) const {
                (cos4Theta * exitPupilBoundsArea) / (LensRearZ() * LensRearZ());
 }
 
-RealisticCamera *CreateRealisticCamera(const ParamSet &params,
-                                       const AnimatedTransform &cam2world,
-                                       Film *film, const Medium *medium) {
+//RealisticCamera *CreateRealisticCamera(
+//    const ParamSet &params, const AnimatedTransform &cam2world,
+//    Film *film, const Medium *medium )
+RealisticCamera *CreateRealisticCamera(
+    const ParamSet &params, const AnimatedTransform &cam2world,
+    lfrt::SampleAccumulator *film, const Medium *medium )
+{
     Float shutteropen = params.FindOneFloat("shutteropen", 0.f);
     Float shutterclose = params.FindOneFloat("shutterclose", 1.f);
     if (shutterclose < shutteropen) {

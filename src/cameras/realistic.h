@@ -41,7 +41,7 @@
 // cameras/realistic.h*
 #include "pbrt.h"
 #include "camera.h"
-#include "film.h"
+//#include "film.h"
 
 namespace pbrt {
 
@@ -52,7 +52,7 @@ class RealisticCamera : public Camera {
     RealisticCamera(const AnimatedTransform &CameraToWorld, Float shutterOpen,
                     Float shutterClose, Float apertureDiameter,
                     Float focusDistance, bool simpleWeighting,
-                    std::vector<Float> &lensData, Film *film,
+                    std::vector<Float> &lensData, lfrt::SampleAccumulator *film,
                     const Medium *medium);
     Float GenerateRay(const CameraSample &sample, Ray *) const;
 
@@ -104,9 +104,9 @@ class RealisticCamera : public Camera {
     void TestExitPupilBounds() const;
 };
 
-RealisticCamera *CreateRealisticCamera(const ParamSet &params,
-                                       const AnimatedTransform &cam2world,
-                                       Film *film, const Medium *medium);
+RealisticCamera *CreateRealisticCamera(
+    const ParamSet &params, const AnimatedTransform &cam2world,
+    lfrt::SampleAccumulator *film, const Medium *medium );
 
 }  // namespace pbrt
 

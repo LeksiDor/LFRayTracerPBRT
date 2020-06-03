@@ -813,18 +813,21 @@ Camera *MakeCamera(const std::string &name, const ParamSet &paramSet,
     return camera;
 }
 
-std::shared_ptr<Sampler> MakeSampler(const std::string &name,
-                                     const ParamSet &paramSet,
-                                     const Film *film) {
+std::shared_ptr<Sampler> MakeSampler(
+    const std::string &name, const ParamSet &paramSet,
+    const lfrt::SampleAccumulator *film )
+{
     Sampler *sampler = nullptr;
+    Bounds2i bounds;
+    film->GetSamplingBounds( bounds.pMin.x, bounds.pMin.y, bounds.pMax.x, bounds.pMax.y );
     if (name == "lowdiscrepancy" || name == "02sequence")
         sampler = CreateZeroTwoSequenceSampler(paramSet);
     else if (name == "maxmindist")
         sampler = CreateMaxMinDistSampler(paramSet);
     else if (name == "halton")
-        sampler = CreateHaltonSampler(paramSet, film->GetSampleBounds());
+        sampler = CreateHaltonSampler( paramSet, bounds );
     else if (name == "sobol")
-        sampler = CreateSobolSampler(paramSet, film->GetSampleBounds());
+        sampler = CreateSobolSampler( paramSet, bounds );
     else if (name == "random")
         sampler = CreateRandomSampler(paramSet);
     else if (name == "stratified")
@@ -835,8 +838,8 @@ std::shared_ptr<Sampler> MakeSampler(const std::string &name,
     return std::shared_ptr<Sampler>(sampler);
 }
 
-std::unique_ptr<Filter> MakeFilter(const std::string &name,
-                                   const ParamSet &paramSet) {
+std::unique_ptr<Filter> MakeFilter( const std::string &name, const ParamSet &paramSet)
+{
     Filter *filter = nullptr;
     if (name == "box")
         filter = CreateBoxFilter(paramSet);

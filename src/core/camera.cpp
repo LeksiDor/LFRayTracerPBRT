@@ -36,19 +36,25 @@
 #include "sampling.h"
 #include "sampler.h"
 
+#include "LFRayTracer.h"
+
+
 namespace pbrt {
 
 // Camera Method Definitions
 //Camera::~Camera() { delete film; }
 Camera::~Camera() {}
 
-Camera::Camera(const AnimatedTransform &CameraToWorld, Float shutterOpen,
-               Float shutterClose, Film *film, const Medium *medium)
-    : CameraToWorld(CameraToWorld),
-      shutterOpen(shutterOpen),
-      shutterClose(shutterClose),
-      film(film),
-      medium(medium) {
+Camera::Camera(
+    const AnimatedTransform &CameraToWorld, Float shutterOpen,
+    Float shutterClose, lfrt::SampleAccumulator *film,
+    const Medium *medium )
+    :CameraToWorld(CameraToWorld)
+    ,shutterOpen(shutterOpen)
+    ,shutterClose(shutterClose)
+    ,film(film)
+    ,medium(medium)
+{
     if (CameraToWorld.HasScale())
         Warning(
             "Scaling detected in world-to-camera transformation!\n"
@@ -111,6 +117,31 @@ Spectrum Camera::Sample_Wi(const Interaction &ref, const Point2f &u,
                            VisibilityTester *vis) const {
     LOG(FATAL) << "Camera::Sample_Wi() is not implemented!";
     return Spectrum(0.f);
+}
+
+
+ProjectiveCamera::ProjectiveCamera(
+    const AnimatedTransform &CameraToWorld, const Transform &CameraToScreen,
+    const Bounds2f &screenWindow, Float shutterOpen, Float shutterClose,
+    Float lensr, Float focald,
+    lfrt::SampleAccumulator *film, const Medium *medium )
+    :Camera( CameraToWorld, shutterOpen, shutterClose, film, medium )
+    ,CameraToScreen(CameraToScreen)
+{
+    // Initialize depth of field parameters
+    lensRadius = lensr;
+    focalDistance = focald;
+
+    // Compute projective camera transformations
+
+    // Compute projective camera screen transformations
+    ScreenToRaster =
+        Scale( film->Width(), film->Height(), 1) *
+        Scale(1 / (screenWindow.pMax.x - screenWindow.pMin.x),
+              1 / (screenWindow.pMin.y - screenWindow.pMax.y), 1) *
+        Translate(Vector3f(-screenWindow.pMin.x, -screenWindow.pMax.y, 0));
+    RasterToScreen = Inverse(ScreenToRaster);
+    RasterToCamera = Inverse(CameraToScreen) * RasterToScreen;
 }
 
 }  // namespace pbrt

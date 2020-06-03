@@ -39,15 +39,16 @@
 #include "light.h"
 #include "stats.h"
 
+#include "LFRayTracer.h"
+
+
 namespace pbrt {
 
 // PerspectiveCamera Method Definitions
-PerspectiveCamera::PerspectiveCamera(const AnimatedTransform &CameraToWorld,
-                                     const Bounds2f &screenWindow,
-                                     Float shutterOpen, Float shutterClose,
-                                     Float lensRadius, Float focalDistance,
-                                     Float fov, Film *film,
-                                     const Medium *medium)
+PerspectiveCamera::PerspectiveCamera(
+    const AnimatedTransform &CameraToWorld, const Bounds2f &screenWindow,
+    Float shutterOpen, Float shutterClose, Float lensRadius, Float focalDistance,
+    Float fov, lfrt::SampleAccumulator *film, const Medium *medium )
     : ProjectiveCamera(CameraToWorld, Perspective(fov, 1e-2f, 1000.f),
                        screenWindow, shutterOpen, shutterClose, lensRadius,
                        focalDistance, film, medium) {
@@ -157,7 +158,11 @@ Spectrum PerspectiveCamera::We(const Ray &ray, Point2f *pRaster2) const {
     if (pRaster2) *pRaster2 = Point2f(pRaster.x, pRaster.y);
 
     // Return zero importance for out of bounds points
-    Bounds2i sampleBounds = film->GetSampleBounds();
+    //Bounds2i sampleBounds = film->GetSampleBounds();
+    Bounds2i sampleBounds;
+    film->GetRenderBounds(
+        sampleBounds.pMin.x, sampleBounds.pMin.y,
+        sampleBounds.pMax.x, sampleBounds.pMax.y );
     if (pRaster.x < sampleBounds.pMin.x || pRaster.x >= sampleBounds.pMax.x ||
         pRaster.y < sampleBounds.pMin.y || pRaster.y >= sampleBounds.pMax.y)
         return 0;
@@ -186,7 +191,10 @@ void PerspectiveCamera::Pdf_We(const Ray &ray, Float *pdfPos,
     Point3f pRaster = Inverse(RasterToCamera)(Inverse(c2w)(pFocus));
 
     // Return zero probability for out of bounds points
-    Bounds2i sampleBounds = film->GetSampleBounds();
+    Bounds2i sampleBounds;
+    film->GetRenderBounds(
+        sampleBounds.pMin.x, sampleBounds.pMin.y,
+        sampleBounds.pMax.x, sampleBounds.pMax.y );
     if (pRaster.x < sampleBounds.pMin.x || pRaster.x >= sampleBounds.pMax.x ||
         pRaster.y < sampleBounds.pMin.y || pRaster.y >= sampleBounds.pMax.y) {
         *pdfPos = *pdfDir = 0;
@@ -223,9 +231,10 @@ Spectrum PerspectiveCamera::Sample_Wi(const Interaction &ref, const Point2f &u,
     return We(lensIntr.SpawnRay(-*wi), pRaster);
 }
 
-PerspectiveCamera *CreatePerspectiveCamera(const ParamSet &params,
-                                           const AnimatedTransform &cam2world,
-                                           Film *film, const Medium *medium) {
+PerspectiveCamera *CreatePerspectiveCamera(
+    const ParamSet &params, const AnimatedTransform &cam2world,
+    lfrt::SampleAccumulator *film, const Medium *medium )
+{
     // Extract common camera parameters from _ParamSet_
     Float shutteropen = params.FindOneFloat("shutteropen", 0.f);
     Float shutterclose = params.FindOneFloat("shutterclose", 1.f);

@@ -102,12 +102,15 @@ Spectrum AOIntegrator::Li(const RayDifferential &r, const Scene &scene,
     return L;
 }
 
-AOIntegrator *CreateAOIntegrator(const ParamSet &params,
-                                 std::shared_ptr<Sampler> sampler,
-                                 std::shared_ptr<const Camera> camera) {
+AOIntegrator *CreateAOIntegrator(
+    const ParamSet &params, std::shared_ptr<Sampler> sampler, std::shared_ptr<const Camera> camera)
+{
     int np;
     const int *pb = params.FindInt("pixelbounds", &np);
-    Bounds2i pixelBounds = camera->film->GetSampleBounds();
+    Bounds2i pixelBounds;
+    camera->film->GetSamplingBounds(
+        pixelBounds.pMin.x, pixelBounds.pMin.y,
+        pixelBounds.pMax.x, pixelBounds.pMax.y );
     if (pb) {
         if (np != 4)
             Error("Expected four values for \"pixelbounds\" parameter. Got %d.",
