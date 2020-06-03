@@ -109,7 +109,7 @@ bool Film::MergeSampleTile( lfrt::SampleTile *tile )
         mergePixel.filterWeightSum += tilePixel.filterWeightSum;
         Float xyzSplat[3];
         tilePixel.splats.ToXYZ(xyzSplat);
-        for (int i = 0; i < 3; ++i) mergePixel.splatXYZ[i].Add( xyz[i] );
+        for (int i = 0; i < 3; ++i) mergePixel.splatXYZ[i].Add( xyzSplat[i] );
     }
     return false;
 }
