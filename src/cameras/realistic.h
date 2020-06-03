@@ -41,7 +41,7 @@
 // cameras/realistic.h*
 #include "pbrt.h"
 #include "camera.h"
-//#include "film.h"
+
 
 namespace pbrt {
 

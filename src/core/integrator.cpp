@@ -259,8 +259,6 @@ void SamplerIntegrator::Render(const Scene &scene) {
             LOG(INFO) << "Starting image tile " << tileBounds;
 
             // Get _FilmTile_ for tile
-            //std::unique_ptr<FilmTile> filmTile =
-            //    camera->film->GetFilmTile(tileBounds);
             lfrt::SampleTile* filmTile = camera->film->CreateSampleTile(
                 tileBounds.pMin.x, tileBounds.pMin.y,
                 tileBounds.pMax.x - tileBounds.pMin.x,
@@ -326,7 +324,6 @@ void SamplerIntegrator::Render(const Scene &scene) {
                     Float rgb[3];
                     L.ToRGB( rgb );
                     // Add camera ray's contribution to image
-                    //filmTile->AddSample( cameraSample.pFilm, L, rayWeight );
                     const lfrt::VEC2 raster = { cameraSample.pFilm.x, cameraSample.pFilm.y };
                     const lfrt::VEC2 auxcoord = { cameraSample.pLens.x, cameraSample.pLens.y };
                     filmTile->AddSample( raster, auxcoord, 1.0, rayWeight, rgb[0], rgb[1], rgb[2], true );
@@ -339,7 +336,6 @@ void SamplerIntegrator::Render(const Scene &scene) {
             LOG(INFO) << "Finished image tile " << tileBounds;
 
             // Merge image tile into _Film_
-            //camera->film->MergeFilmTile(std::move(filmTile));
             camera->film->MergeSampleTile( filmTile );
             camera->film->DestroySampleTile( filmTile );
             reporter.Update();

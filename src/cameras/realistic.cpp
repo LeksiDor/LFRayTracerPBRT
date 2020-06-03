@@ -729,9 +729,7 @@ Float RealisticCamera::GenerateRay(const CameraSample &sample, Ray *ray) const
                (cos4Theta * exitPupilBoundsArea) / (LensRearZ() * LensRearZ());
 }
 
-//RealisticCamera *CreateRealisticCamera(
-//    const ParamSet &params, const AnimatedTransform &cam2world,
-//    Film *film, const Medium *medium )
+
 RealisticCamera *CreateRealisticCamera(
     const ParamSet &params, const AnimatedTransform &cam2world,
     lfrt::SampleAccumulator *film, const Medium *medium )
