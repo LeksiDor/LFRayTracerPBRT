@@ -55,9 +55,9 @@ Float EnvironmentCamera::GenerateRay(const CameraSample &sample,
     return 1;
 }
 
-EnvironmentCamera *CreateEnvironmentCamera(const ParamSet &params,
-                                           const AnimatedTransform &cam2world,
-                                           Film *film, const Medium *medium) {
+EnvironmentCamera *CreateEnvironmentCamera(
+    const ParamSet &params, const AnimatedTransform &cam2world,
+    lfrt::SampleAccumulator *film, const Medium *medium ) {
     // Extract common camera parameters from _ParamSet_
     Float shutteropen = params.FindOneFloat("shutteropen", 0.f);
     Float shutterclose = params.FindOneFloat("shutterclose", 1.f);
@@ -96,8 +96,7 @@ EnvironmentCamera *CreateEnvironmentCamera(const ParamSet &params,
     }
     (void)lensradius;     // don't need this
     (void)focaldistance;  // don't need this
-    return new EnvironmentCamera(cam2world, shutteropen, shutterclose, film,
-                                 medium);
+    return new EnvironmentCamera(cam2world, shutteropen, shutterclose, film, medium);
 }
 
 }  // namespace pbrt

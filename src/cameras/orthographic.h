@@ -49,10 +49,13 @@ namespace pbrt {
 class OrthographicCamera : public ProjectiveCamera {
   public:
     // OrthographicCamera Public Methods
-    OrthographicCamera(const AnimatedTransform &CameraToWorld,
-                       const Bounds2f &screenWindow, Float shutterOpen,
-                       Float shutterClose, Float lensRadius,
-                       Float focalDistance, Film *film, const Medium *medium)
+    OrthographicCamera(
+        const AnimatedTransform &CameraToWorld,
+        const Bounds2f &screenWindow,
+        Float shutterOpen, Float shutterClose,
+        Float lensRadius, Float focalDistance,
+        lfrt::SampleAccumulator *film,
+        const Medium *medium )
         : ProjectiveCamera(CameraToWorld, Orthographic(0, 1), screenWindow,
                            shutterOpen, shutterClose, lensRadius, focalDistance,
                            film, medium) {
@@ -69,9 +72,9 @@ class OrthographicCamera : public ProjectiveCamera {
     Vector3f dxCamera, dyCamera;
 };
 
-OrthographicCamera *CreateOrthographicCamera(const ParamSet &params,
-                                             const AnimatedTransform &cam2world,
-                                             Film *film, const Medium *medium);
+OrthographicCamera *CreateOrthographicCamera(
+    const ParamSet &params, const AnimatedTransform &cam2world,
+    lfrt::SampleAccumulator *film, const Medium *medium );
 
 }  // namespace pbrt
 

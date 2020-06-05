@@ -48,15 +48,17 @@ namespace pbrt {
 class EnvironmentCamera : public Camera {
   public:
     // EnvironmentCamera Public Methods
-    EnvironmentCamera(const AnimatedTransform &CameraToWorld, Float shutterOpen,
-                      Float shutterClose, Film *film, const Medium *medium)
+    EnvironmentCamera(
+        const AnimatedTransform &CameraToWorld,
+        Float shutterOpen, Float shutterClose,
+        lfrt::SampleAccumulator *film, const Medium *medium )
         : Camera(CameraToWorld, shutterOpen, shutterClose, film, medium) {}
     Float GenerateRay(const CameraSample &sample, Ray *) const;
 };
 
-EnvironmentCamera *CreateEnvironmentCamera(const ParamSet &params,
-                                           const AnimatedTransform &cam2world,
-                                           Film *film, const Medium *medium);
+EnvironmentCamera *CreateEnvironmentCamera(
+    const ParamSet &params, const AnimatedTransform &cam2world,
+    lfrt::SampleAccumulator *film, const Medium *medium );
 
 }  // namespace pbrt
 

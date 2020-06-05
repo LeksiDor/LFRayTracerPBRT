@@ -118,9 +118,9 @@ Float OrthographicCamera::GenerateRayDifferential(const CameraSample &sample,
     return 1;
 }
 
-OrthographicCamera *CreateOrthographicCamera(const ParamSet &params,
-                                             const AnimatedTransform &cam2world,
-                                             Film *film, const Medium *medium) {
+OrthographicCamera *CreateOrthographicCamera(
+    const ParamSet &params, const AnimatedTransform &cam2world,
+    lfrt::SampleAccumulator *film, const Medium *medium ) {
     // Extract common camera parameters from _ParamSet_
     Float shutteropen = params.FindOneFloat("shutteropen", 0.f);
     Float shutterclose = params.FindOneFloat("shutterclose", 1.f);

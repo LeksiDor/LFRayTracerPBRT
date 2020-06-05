@@ -743,9 +743,10 @@ std::shared_ptr<Primitive> MakeAccelerator(
     return accel;
 }
 
-Camera *MakeCamera(const std::string &name, const ParamSet &paramSet,
-                   const TransformSet &cam2worldSet, Float transformStart,
-                   Float transformEnd, Film *film) {
+Camera *MakeCamera(
+    const std::string &name, const ParamSet &paramSet,
+    const TransformSet &cam2worldSet, Float transformStart, Float transformEnd,
+    lfrt::SampleAccumulator *film ) {
     Camera *camera = nullptr;
     MediumInterface mediumInterface = graphicsState.CreateMediumInterface();
     static_assert(MaxTransforms == 2,
@@ -1606,6 +1607,7 @@ bool pbrtRenderScene(
     activeTransformBits = AllTransformsBits;
     namedCoordinateSystems.erase(namedCoordinateSystems.begin(),
                                  namedCoordinateSystems.end());
+    return true;
 }
 
 
