@@ -40,6 +40,8 @@
 #include "medium.h"
 #include "stats.h"
 
+#include "renderoptions.h"
+
 // API Additional Headers
 #include "accelerators/bvh.h"
 #include "accelerators/kdtreeaccel.h"
@@ -124,58 +126,15 @@ namespace pbrt {
 Options PbrtOptions;
 
 // API Local Classes
-PBRT_CONSTEXPR int MaxTransforms = 2;
-PBRT_CONSTEXPR int StartTransformBits = 1 << 0;
-PBRT_CONSTEXPR int EndTransformBits = 1 << 1;
-PBRT_CONSTEXPR int AllTransformsBits = (1 << MaxTransforms) - 1;
-struct TransformSet {
-    // TransformSet Public Methods
-    Transform &operator[](int i) {
-        CHECK_GE(i, 0);
-        CHECK_LT(i, MaxTransforms);
-        return t[i];
-    }
-    const Transform &operator[](int i) const {
-        CHECK_GE(i, 0);
-        CHECK_LT(i, MaxTransforms);
-        return t[i];
-    }
-    friend TransformSet Inverse(const TransformSet &ts) {
-        TransformSet tInv;
-        for (int i = 0; i < MaxTransforms; ++i) tInv.t[i] = Inverse(ts.t[i]);
-        return tInv;
-    }
-    bool IsAnimated() const {
-        for (int i = 0; i < MaxTransforms - 1; ++i)
-            if (t[i] != t[i + 1]) return true;
-        return false;
-    }
 
-  private:
-    Transform t[MaxTransforms];
-};
 
-struct RenderOptions {
-    // RenderOptions Public Methods
+struct RenderData {
+    // RenderData Public Methods
     Integrator *MakeIntegrator() const;
     Scene *MakeScene();
     Camera *MakeCamera() const;
 
-    // RenderOptions Public Data
-    Float transformStartTime = 0, transformEndTime = 1;
-    std::string FilterName = "box";
-    ParamSet FilterParams;
-    std::string FilmName = "image";
-    ParamSet FilmParams;
-    std::string SamplerName = "halton";
-    ParamSet SamplerParams;
-    std::string AcceleratorName = "bvh";
-    ParamSet AcceleratorParams;
-    std::string IntegratorName = "path";
-    ParamSet IntegratorParams;
-    std::string CameraName = "perspective";
-    ParamSet CameraParams;
-    TransformSet CameraToWorld;
+    // RenderData Public Data
     std::map<std::string, std::shared_ptr<Medium>> namedMedia;
     std::vector<std::shared_ptr<Light>> lights;
     std::vector<std::shared_ptr<Primitive>> primitives;
@@ -363,7 +322,7 @@ static APIState currentApiState = APIState::Uninitialized;
 static TransformSet curTransform;
 static uint32_t activeTransformBits = AllTransformsBits;
 static std::map<std::string, TransformSet> namedCoordinateSystems;
-static std::unique_ptr<RenderOptions> renderOptions;
+static std::unique_ptr<RenderData> renderData;
 static GraphicsState graphicsState;
 static std::vector<GraphicsState> pushedGraphicsStates;
 static std::vector<TransformSet> pushedTransforms;
@@ -591,14 +550,16 @@ std::shared_ptr<Material> MakeMaterial(const std::string &name,
         material = CreateMatteMaterial(mp);
     }
 
+    const RenderOptions &renderOptions = theRenderOptions();
+
     if ((name == "subsurface" || name == "kdsubsurface") &&
-        (renderOptions->IntegratorName != "path" &&
-         (renderOptions->IntegratorName != "volpath")))
+        (renderOptions.IntegratorName != "path" &&
+         (renderOptions.IntegratorName != "volpath")))
         Warning(
             "Subsurface scattering material \"%s\" used, but \"%s\" "
             "integrator doesn't support subsurface scattering. "
             "Use \"path\" or \"volpath\".",
-            name.c_str(), renderOptions->IntegratorName.c_str());
+            name.c_str(), renderOptions.IntegratorName.c_str());
 
     mp.ReportUnused();
     if (!material) Error("Unable to create material \"%s\"", name.c_str());
@@ -866,7 +827,7 @@ void pbrtInit(const Options &opt) {
     if (currentApiState != APIState::Uninitialized)
         Error("pbrtInit() has already been called.");
     currentApiState = APIState::OptionsBlock;
-    renderOptions.reset(new RenderOptions);
+    renderData.reset(new RenderData);
     graphicsState = GraphicsState();
     catIndentCount = 0;
 
@@ -1003,8 +964,8 @@ void pbrtActiveTransformStartTime() {
 
 void pbrtTransformTimes(Float start, Float end) {
     VERIFY_OPTIONS("TransformTimes");
-    renderOptions->transformStartTime = start;
-    renderOptions->transformEndTime = end;
+    theRenderOptions().transformStartTime = start;
+    theRenderOptions().transformEndTime = end;
     if (PbrtOptions.cat || PbrtOptions.toPly)
         printf("%*sTransformTimes %.9g %.9g\n", catIndentCount, "", start,
                end);
@@ -1012,8 +973,8 @@ void pbrtTransformTimes(Float start, Float end) {
 
 void pbrtPixelFilter(const std::string &name, const ParamSet &params) {
     VERIFY_OPTIONS("PixelFilter");
-    renderOptions->FilterName = name;
-    renderOptions->FilterParams = params;
+    theRenderOptions().FilterName = name;
+    theRenderOptions().FilterParams = params;
     if (PbrtOptions.cat || PbrtOptions.toPly) {
         printf("%*sPixelFilter \"%s\" ", catIndentCount, "", name.c_str());
         params.Print(catIndentCount);
@@ -1023,8 +984,8 @@ void pbrtPixelFilter(const std::string &name, const ParamSet &params) {
 
 void pbrtFilm(const std::string &type, const ParamSet &params) {
     VERIFY_OPTIONS("Film");
-    renderOptions->FilmParams = params;
-    renderOptions->FilmName = type;
+    theRenderOptions().FilmParams = params;
+    theRenderOptions().FilmName = type;
     if (PbrtOptions.cat || PbrtOptions.toPly) {
         printf("%*sFilm \"%s\" ", catIndentCount, "", type.c_str());
         params.Print(catIndentCount);
@@ -1034,8 +995,8 @@ void pbrtFilm(const std::string &type, const ParamSet &params) {
 
 void pbrtSampler(const std::string &name, const ParamSet &params) {
     VERIFY_OPTIONS("Sampler");
-    renderOptions->SamplerName = name;
-    renderOptions->SamplerParams = params;
+    theRenderOptions().SamplerName = name;
+    theRenderOptions().SamplerParams = params;
     if (PbrtOptions.cat || PbrtOptions.toPly) {
         printf("%*sSampler \"%s\" ", catIndentCount, "", name.c_str());
         params.Print(catIndentCount);
@@ -1045,8 +1006,8 @@ void pbrtSampler(const std::string &name, const ParamSet &params) {
 
 void pbrtAccelerator(const std::string &name, const ParamSet &params) {
     VERIFY_OPTIONS("Accelerator");
-    renderOptions->AcceleratorName = name;
-    renderOptions->AcceleratorParams = params;
+    theRenderOptions().AcceleratorName = name;
+    theRenderOptions().AcceleratorParams = params;
     if (PbrtOptions.cat || PbrtOptions.toPly) {
         printf("%*sAccelerator \"%s\" ", catIndentCount, "", name.c_str());
         params.Print(catIndentCount);
@@ -1056,8 +1017,8 @@ void pbrtAccelerator(const std::string &name, const ParamSet &params) {
 
 void pbrtIntegrator(const std::string &name, const ParamSet &params) {
     VERIFY_OPTIONS("Integrator");
-    renderOptions->IntegratorName = name;
-    renderOptions->IntegratorParams = params;
+    theRenderOptions().IntegratorName = name;
+    theRenderOptions().IntegratorParams = params;
     if (PbrtOptions.cat || PbrtOptions.toPly) {
         printf("%*sIntegrator \"%s\" ", catIndentCount, "", name.c_str());
         params.Print(catIndentCount);
@@ -1067,10 +1028,10 @@ void pbrtIntegrator(const std::string &name, const ParamSet &params) {
 
 void pbrtCamera(const std::string &name, const ParamSet &params) {
     VERIFY_OPTIONS("Camera");
-    renderOptions->CameraName = name;
-    renderOptions->CameraParams = params;
-    renderOptions->CameraToWorld = Inverse(curTransform);
-    namedCoordinateSystems["camera"] = renderOptions->CameraToWorld;
+    theRenderOptions().CameraName = name;
+    theRenderOptions().CameraParams = params;
+    theRenderOptions().CameraToWorld = Inverse(curTransform);
+    namedCoordinateSystems["camera"] = theRenderOptions().CameraToWorld;
     if (PbrtOptions.cat || PbrtOptions.toPly) {
         printf("%*sCamera \"%s\" ", catIndentCount, "", name.c_str());
         params.Print(catIndentCount);
@@ -1087,7 +1048,7 @@ void pbrtMakeNamedMedium(const std::string &name, const ParamSet &params) {
     else {
         std::shared_ptr<Medium> medium =
             MakeMedium(type, params, curTransform[0]);
-        if (medium) renderOptions->namedMedia[name] = medium;
+        if (medium) renderData->namedMedia[name] = medium;
     }
     if (PbrtOptions.cat || PbrtOptions.toPly) {
         printf("%*sMakeNamedMedium \"%s\" ", catIndentCount, "", name.c_str());
@@ -1101,7 +1062,7 @@ void pbrtMediumInterface(const std::string &insideName,
     VERIFY_INITIALIZED("MediumInterface");
     graphicsState.currentInsideMedium = insideName;
     graphicsState.currentOutsideMedium = outsideName;
-    renderOptions->haveScatteringMedia = true;
+    renderData->haveScatteringMedia = true;
     if (PbrtOptions.cat || PbrtOptions.toPly)
         printf("%*sMediumInterface \"%s\" \"%s\"\n", catIndentCount, "",
                insideName.c_str(), outsideName.c_str());
@@ -1299,7 +1260,7 @@ void pbrtLightSource(const std::string &name, const ParamSet &params) {
     if (!lt)
         Error("LightSource: light type \"%s\" unknown.", name.c_str());
     else
-        renderOptions->lights.push_back(lt);
+        renderData->lights.push_back(lt);
     if (PbrtOptions.cat || PbrtOptions.toPly) {
         printf("%*sLightSource \"%s\" ", catIndentCount, "", name.c_str());
         params.Print(catIndentCount);
@@ -1385,8 +1346,8 @@ void pbrtShape(const std::string &name, const ParamSet &params) {
             transformCache.Lookup(curTransform[1])
         };
         AnimatedTransform animatedObjectToWorld(
-            ObjToWorld[0], renderOptions->transformStartTime, ObjToWorld[1],
-            renderOptions->transformEndTime);
+            ObjToWorld[0], theRenderOptions().transformStartTime,
+            ObjToWorld[1], theRenderOptions().transformEndTime );
         if (prims.size() > 1) {
             std::shared_ptr<Primitive> bvh = std::make_shared<BVHAccel>(prims);
             prims.clear();
@@ -1396,16 +1357,16 @@ void pbrtShape(const std::string &name, const ParamSet &params) {
             prims[0], animatedObjectToWorld);
     }
     // Add _prims_ and _areaLights_ to scene or current instance
-    if (renderOptions->currentInstance) {
+    if (renderData->currentInstance) {
         if (areaLights.size())
             Warning("Area lights not supported with object instancing");
-        renderOptions->currentInstance->insert(
-            renderOptions->currentInstance->end(), prims.begin(), prims.end());
+        renderData->currentInstance->insert(
+            renderData->currentInstance->end(), prims.begin(), prims.end());
     } else {
-        renderOptions->primitives.insert(renderOptions->primitives.end(),
+        renderData->primitives.insert(renderData->primitives.end(),
                                          prims.begin(), prims.end());
         if (areaLights.size())
-            renderOptions->lights.insert(renderOptions->lights.end(),
+            renderData->lights.insert(renderData->lights.end(),
                                          areaLights.begin(), areaLights.end());
     }
 }
@@ -1484,17 +1445,17 @@ std::shared_ptr<Material> GraphicsState::GetMaterialForShape(
 MediumInterface GraphicsState::CreateMediumInterface() {
     MediumInterface m;
     if (currentInsideMedium != "") {
-        if (renderOptions->namedMedia.find(currentInsideMedium) !=
-            renderOptions->namedMedia.end())
-            m.inside = renderOptions->namedMedia[currentInsideMedium].get();
+        if (renderData->namedMedia.find(currentInsideMedium) !=
+            renderData->namedMedia.end())
+            m.inside = renderData->namedMedia[currentInsideMedium].get();
         else
             Error("Named medium \"%s\" undefined.",
                   currentInsideMedium.c_str());
     }
     if (currentOutsideMedium != "") {
-        if (renderOptions->namedMedia.find(currentOutsideMedium) !=
-            renderOptions->namedMedia.end())
-            m.outside = renderOptions->namedMedia[currentOutsideMedium].get();
+        if (renderData->namedMedia.find(currentOutsideMedium) !=
+            renderData->namedMedia.end())
+            m.outside = renderData->namedMedia[currentOutsideMedium].get();
         else
             Error("Named medium \"%s\" undefined.",
                   currentOutsideMedium.c_str());
@@ -1512,10 +1473,10 @@ void pbrtReverseOrientation() {
 void pbrtObjectBegin(const std::string &name) {
     VERIFY_WORLD("ObjectBegin");
     pbrtAttributeBegin();
-    if (renderOptions->currentInstance)
+    if (renderData->currentInstance)
         Error("ObjectBegin called inside of instance definition");
-    renderOptions->instances[name] = std::vector<std::shared_ptr<Primitive>>();
-    renderOptions->currentInstance = &renderOptions->instances[name];
+    renderData->instances[name] = std::vector<std::shared_ptr<Primitive>>();
+    renderData->currentInstance = &renderData->instances[name];
     if (PbrtOptions.cat || PbrtOptions.toPly)
         printf("%*sObjectBegin \"%s\"\n", catIndentCount, "", name.c_str());
 }
@@ -1524,11 +1485,11 @@ STAT_COUNTER("Scene/Object instances created", nObjectInstancesCreated);
 
 void pbrtObjectEnd() {
     VERIFY_WORLD("ObjectEnd");
-    if (!renderOptions->currentInstance)
+    if (!renderData->currentInstance)
         Error("ObjectEnd called outside of instance definition");
     if (PbrtOptions.cat || PbrtOptions.toPly)
         printf("%*sObjectEnd\n", catIndentCount, "");
-    renderOptions->currentInstance = nullptr;
+    renderData->currentInstance = nullptr;
     pbrtAttributeEnd();
     ++nObjectInstancesCreated;
 }
@@ -1543,23 +1504,23 @@ void pbrtObjectInstance(const std::string &name) {
     }
 
     // Perform object instance error checking
-    if (renderOptions->currentInstance) {
+    if (renderData->currentInstance) {
         Error("ObjectInstance can't be called inside instance definition");
         return;
     }
-    if (renderOptions->instances.find(name) == renderOptions->instances.end()) {
+    if (renderData->instances.find(name) == renderData->instances.end()) {
         Error("Unable to find instance named \"%s\"", name.c_str());
         return;
     }
     std::vector<std::shared_ptr<Primitive>> &in =
-        renderOptions->instances[name];
+        renderData->instances[name];
     if (in.empty()) return;
     ++nObjectInstancesUsed;
     if (in.size() > 1) {
         // Create aggregate for instance _Primitive_s
         std::shared_ptr<Primitive> accel(
-            MakeAccelerator(renderOptions->AcceleratorName, std::move(in),
-                            renderOptions->AcceleratorParams));
+            MakeAccelerator(theRenderOptions().AcceleratorName, std::move(in),
+                            theRenderOptions().AcceleratorParams));
         if (!accel) accel = std::make_shared<BVHAccel>(in);
         in.clear();
         in.push_back(accel);
@@ -1572,11 +1533,11 @@ void pbrtObjectInstance(const std::string &name) {
         transformCache.Lookup(curTransform[1])
     };
     AnimatedTransform animatedInstanceToWorld(
-        InstanceToWorld[0], renderOptions->transformStartTime,
-        InstanceToWorld[1], renderOptions->transformEndTime);
+        InstanceToWorld[0], theRenderOptions().transformStartTime,
+        InstanceToWorld[1], theRenderOptions().transformEndTime);
     std::shared_ptr<Primitive> prim(
         std::make_shared<TransformedPrimitive>(in[0], animatedInstanceToWorld));
-    renderOptions->primitives.push_back(prim);
+    renderData->primitives.push_back(prim);
 }
 
 void pbrtWorldEnd() {
@@ -1604,8 +1565,8 @@ bool pbrtRenderScene(
     if (PbrtOptions.cat || PbrtOptions.toPly) {
         printf("%*sWorldEnd\n", catIndentCount, "");
     } else {
-        std::unique_ptr<Integrator> integrator(renderOptions->MakeIntegrator());
-        std::unique_ptr<Scene> scene(renderOptions->MakeScene());
+        std::unique_ptr<Integrator> integrator(renderData->MakeIntegrator());
+        std::unique_ptr<Scene> scene(renderData->MakeScene());
 
         // This is kind of ugly; we directly override the current profiler
         // state to switch from parsing/scene construction related stuff to
@@ -1628,7 +1589,7 @@ bool pbrtRenderScene(
     transformCache.Clear();
     ImageTexture<Float, Float>::ClearCache();
     ImageTexture<RGBSpectrum, Spectrum>::ClearCache();
-    renderOptions.reset(new RenderOptions);
+    renderData.reset(new RenderData);
 
     if (!PbrtOptions.cat && !PbrtOptions.toPly) {
         MergeWorkerThreadStats();
@@ -1648,9 +1609,11 @@ bool pbrtRenderScene(
 }
 
 
-Scene *RenderOptions::MakeScene() {
-    std::shared_ptr<Primitive> accelerator =
-        MakeAccelerator(AcceleratorName, std::move(primitives), AcceleratorParams);
+Scene *RenderData::MakeScene() {
+    std::shared_ptr<Primitive> accelerator = MakeAccelerator(
+        theRenderOptions().AcceleratorName,
+        std::move(primitives),
+        theRenderOptions().AcceleratorParams );
     if (!accelerator) accelerator = std::make_shared<BVHAccel>(primitives);
     Scene *scene = new Scene(accelerator, lights);
     // Erase primitives and lights from _RenderOptions_
@@ -1659,19 +1622,24 @@ Scene *RenderOptions::MakeScene() {
     return scene;
 }
 
-Integrator *RenderOptions::MakeIntegrator() const {
+Integrator *RenderData::MakeIntegrator() const {
     std::shared_ptr<const Camera> camera(MakeCamera());
     if (!camera) {
         Error("Unable to create camera");
         return nullptr;
     }
 
-    std::shared_ptr<Sampler> sampler =
-        MakeSampler(SamplerName, SamplerParams, camera->film);
+    std::shared_ptr<Sampler> sampler = MakeSampler(
+        theRenderOptions().SamplerName,
+        theRenderOptions().SamplerParams,
+        camera->film );
     if (!sampler) {
         Error("Unable to create sampler.");
         return nullptr;
     }
+
+    const std::string &IntegratorName = theRenderOptions().IntegratorName;
+    const ParamSet &IntegratorParams = theRenderOptions().IntegratorParams;
 
     Integrator *integrator = nullptr;
     if (IntegratorName == "whitted")
@@ -1696,7 +1664,7 @@ Integrator *RenderOptions::MakeIntegrator() const {
         return nullptr;
     }
 
-    if (renderOptions->haveScatteringMedia && IntegratorName != "volpath" &&
+    if (renderData->haveScatteringMedia && IntegratorName != "volpath" &&
         IntegratorName != "bdpt" && IntegratorName != "mlt") {
         Warning(
             "Scene has scattering media but \"%s\" integrator doesn't support "
@@ -1713,18 +1681,19 @@ Integrator *RenderOptions::MakeIntegrator() const {
     return integrator;
 }
 
-Camera *RenderOptions::MakeCamera() const {
-    std::unique_ptr<Filter> filter = MakeFilter(FilterName, FilterParams);
+Camera *RenderData::MakeCamera() const {
+    const RenderOptions &options = theRenderOptions();
+    std::unique_ptr<Filter> filter = MakeFilter( options.FilterName, options.FilterParams );
     Film *film = theFilm();
-    if ( FilmName != "image" )
+    if ( options.FilmName != "image" )
     {
         Error("Unable to create film.");
         return nullptr;
     }
-    film->Initialize( FilmParams, std::move(filter) );
-    Camera *camera = pbrt::MakeCamera(CameraName, CameraParams, CameraToWorld,
-                                  renderOptions->transformStartTime,
-                                  renderOptions->transformEndTime, film);
+    film->Initialize( options.FilmParams, std::move(filter) );
+    Camera *camera = pbrt::MakeCamera(
+        options.CameraName, options.CameraParams, options.CameraToWorld,
+        options.transformStartTime, options.transformEndTime, film );
     return camera;
 }
 
