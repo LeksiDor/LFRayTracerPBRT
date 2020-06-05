@@ -396,7 +396,7 @@ SET ( PBRT_CORE_SOURCE
   src/core/progressreporter.cpp
   src/core/quaternion.cpp
   src/core/reflection.cpp
-  src/core/renderdata.cpp
+  src/core/renderoptions.cpp
   src/core/sampler.cpp
   src/core/sampling.cpp
   src/core/scene.cpp
@@ -438,7 +438,7 @@ SET ( PBRT_CORE_HEADERS
   src/core/progressreporter.h
   src/core/quaternion.h
   src/core/reflection.h
-  src/core/renderdata.h
+  src/core/renderoptions.h
   src/core/rng.h
   src/core/sampler.h
   src/core/sampling.h
