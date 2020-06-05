@@ -76,7 +76,7 @@ public:
     virtual bool GetSamplingBounds( int& startX, int& startY, int& endX, int& endY ) const override;
     virtual lfrt::SampleTile* CreateSampleTile(
         const int& startX, const int& startY,
-        const int& sizeX,  const int& sizeY ) override;
+        const int&   endX, const int&   endY ) override;
     virtual bool MergeSampleTile( lfrt::SampleTile* tile ) override;
     virtual bool DestroySampleTile( lfrt::SampleTile* tile ) override;
     virtual bool GetColor(

@@ -363,8 +363,7 @@ void BDPTIntegrator::Render(const Scene &scene) {
             //    camera->film->GetFilmTile(tileBounds);
             lfrt::SampleTile* filmTile = camera->film->CreateSampleTile(
                 tileBounds.pMin.x, tileBounds.pMin.y,
-                tileBounds.pMax.x - tileBounds.pMin.x,
-                tileBounds.pMax.y - tileBounds.pMin.y );
+                tileBounds.pMax.x, tileBounds.pMax.y );
             for (Point2i pPixel : tileBounds) {
                 tileSampler->StartPixel(pPixel);
                 if (!InsideExclusive(pPixel, pixelBounds))

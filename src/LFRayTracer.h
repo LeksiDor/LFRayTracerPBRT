@@ -79,7 +79,7 @@ public:
 	virtual bool GetRenderBounds( Int& startX, Int& startY, Int& endX, Int& endY ) const = 0;
 	// Region of pixels which affects RenderBounds. Should be greater or equal.
 	virtual bool GetSamplingBounds( Int& startX, Int& startY, Int& endX, Int& endY ) const = 0;
-	virtual SampleTile* CreateSampleTile( const Int& startX, const Int& startY, const Int& sizeX, const Int& sizeY ) = 0;
+	virtual SampleTile* CreateSampleTile( const Int& startX, const Int& startY, const Int& endX, const Int& endY ) = 0;
     virtual bool MergeSampleTile(SampleTile* tile) = 0;
 	virtual bool DestroySampleTile( SampleTile* tile ) = 0;
 	virtual bool GetColor( const Int& x, const Int& y, Real& r, Real& g, Real& b ) const = 0;

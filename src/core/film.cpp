@@ -70,11 +70,11 @@ bool Film::GetSamplingBounds( int &startX, int &startY, int &endX, int &endY ) c
 
 
 lfrt::SampleTile *Film::CreateSampleTile(
-    const int &startX, const int &startY, const int &sizeX, const int &sizeY )
+    const int &startX, const int &startY, const int &endX, const int &endY )
 {
     // Bound image pixels that samples in _sampleBounds_ contribute to
     Vector2f halfPixel = Vector2f( 0.5f, 0.5f );
-    const Bounds2i sampleBounds( Point2i(startX,startY), Point2i(startX+sizeX,startY+sizeY) );
+    const Bounds2i sampleBounds( Point2i(startX,startY), Point2i(endX,endY) );
     Bounds2f floatBounds = (Bounds2f)sampleBounds;
     Point2i p0 = (Point2i)Ceil(floatBounds.pMin - halfPixel - filter->radius);
     Point2i p1 = (Point2i)Floor(floatBounds.pMax - halfPixel + filter->radius) + Point2i(1, 1);

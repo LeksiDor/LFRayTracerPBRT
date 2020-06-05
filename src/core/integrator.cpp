@@ -261,8 +261,7 @@ void SamplerIntegrator::Render(const Scene &scene) {
             // Get _FilmTile_ for tile
             lfrt::SampleTile* filmTile = camera->film->CreateSampleTile(
                 tileBounds.pMin.x, tileBounds.pMin.y,
-                tileBounds.pMax.x - tileBounds.pMin.x,
-                tileBounds.pMax.y - tileBounds.pMin.y );
+                tileBounds.pMax.x, tileBounds.pMax.y );
 
             // Loop over pixels in tile to render them
             for (Point2i pixel : tileBounds) {
