@@ -49,11 +49,6 @@
 #include "cameras/orthographic.h"
 #include "cameras/perspective.h"
 #include "cameras/realistic.h"
-#include "filters/box.h"
-#include "filters/gaussian.h"
-#include "filters/mitchell.h"
-#include "filters/sinc.h"
-#include "filters/triangle.h"
 #include "integrators/bdpt.h"
 #include "integrators/directlighting.h"
 #include "integrators/mlt.h"
@@ -130,9 +125,9 @@ Options PbrtOptions;
 
 struct RenderData {
     // RenderData Public Methods
-    Integrator *MakeIntegrator() const;
+    Integrator *MakeIntegrator( lfrt::SampleAccumulator &sampleAccum ) const;
     Scene *MakeScene();
-    Camera *MakeCamera() const;
+    //Camera *MakeCamera() const;
 
     // RenderData Public Data
     std::map<std::string, std::shared_ptr<Medium>> namedMedia;
@@ -800,26 +795,7 @@ std::shared_ptr<Sampler> MakeSampler(
     return std::shared_ptr<Sampler>(sampler);
 }
 
-std::unique_ptr<Filter> MakeFilter( const std::string &name, const ParamSet &paramSet)
-{
-    Filter *filter = nullptr;
-    if (name == "box")
-        filter = CreateBoxFilter(paramSet);
-    else if (name == "gaussian")
-        filter = CreateGaussianFilter(paramSet);
-    else if (name == "mitchell")
-        filter = CreateMitchellFilter(paramSet);
-    else if (name == "sinc")
-        filter = CreateSincFilter(paramSet);
-    else if (name == "triangle")
-        filter = CreateTriangleFilter(paramSet);
-    else {
-        Error("Filter \"%s\" unknown.", name.c_str());
-        exit(1);
-    }
-    paramSet.ReportUnused();
-    return std::unique_ptr<Filter>(filter);
-}
+
 
 // API Function Definitions
 void pbrtInit(const Options &opt) {
@@ -1566,7 +1542,8 @@ bool pbrtRenderScene(
     if (PbrtOptions.cat || PbrtOptions.toPly) {
         printf("%*sWorldEnd\n", catIndentCount, "");
     } else {
-        std::unique_ptr<Integrator> integrator(renderData->MakeIntegrator());
+        std::unique_ptr<Integrator> integrator(
+            renderData->MakeIntegrator( sampleAccum ) );
         std::unique_ptr<Scene> scene(renderData->MakeScene());
 
         // This is kind of ugly; we directly override the current profiler
@@ -1624,8 +1601,13 @@ Scene *RenderData::MakeScene() {
     return scene;
 }
 
-Integrator *RenderData::MakeIntegrator() const {
-    std::shared_ptr<const Camera> camera(MakeCamera());
+Integrator *RenderData::MakeIntegrator( lfrt::SampleAccumulator &sampleAccum ) const
+{
+    const RenderOptions &options = theRenderOptions();
+    std::shared_ptr<const Camera> camera( MakeCamera(
+        options.CameraName, options.CameraParams, options.CameraToWorld,
+        options.transformStartTime, options.transformEndTime, &sampleAccum ) );
+
     if (!camera) {
         Error("Unable to create camera");
         return nullptr;
@@ -1683,32 +1665,6 @@ Integrator *RenderData::MakeIntegrator() const {
     return integrator;
 }
 
-Camera *RenderData::MakeCamera() const {
-    const RenderOptions &options = theRenderOptions();
-    std::unique_ptr<Filter> filter = MakeFilter( options.FilterName, options.FilterParams );
-    Film *film = theFilm();
-    if ( options.FilmName != "image" )
-    {
-        Error("Unable to create film.");
-        return nullptr;
-    }
-    film->Initialize( options.FilmParams, std::move(filter) );
-    Camera *camera = pbrt::MakeCamera(
-        options.CameraName, options.CameraParams, options.CameraToWorld,
-        options.transformStartTime, options.transformEndTime, film );
-    return camera;
-}
-
-
-Film *theFilm()
-{
-    static std::shared_ptr<Film> film = nullptr;
-    if ( film == nullptr )
-    {
-        film = std::make_shared<Film>();
-    }
-    return film.get();
-}
 
 
 }  // namespace pbrt

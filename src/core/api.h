@@ -98,7 +98,6 @@ void pbrtParseFile(std::string filename);
 void pbrtParseString(std::string str);
 
 
-Film* theFilm();
 
 }  // namespace pbrt
 
