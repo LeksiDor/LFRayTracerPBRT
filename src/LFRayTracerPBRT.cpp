@@ -63,8 +63,7 @@ public:
     virtual bool Render( const RayGenerator& raygen, SampleGenerator& sampleGen,
                         SampleAccumulator& sampleAccum ) const override
     {
-        pbrtRenderScene();
-        return true;
+        return pbrtRenderScene( raygen, sampleGen, sampleAccum );
     }
 
 public:

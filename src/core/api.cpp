@@ -1595,7 +1595,10 @@ void pbrtWorldEnd() {
 }
 
 
-void pbrtRenderScene() 
+bool pbrtRenderScene(
+    const lfrt::RayGenerator &raygen,
+    lfrt::SampleGenerator &sampleGen,
+    lfrt::SampleAccumulator &sampleAccum )
 {
     // Create scene and render
     if (PbrtOptions.cat || PbrtOptions.toPly) {

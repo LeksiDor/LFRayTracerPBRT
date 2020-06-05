@@ -40,6 +40,7 @@
 
 // core/api.h*
 #include "pbrt.h"
+#include "LFRayTracer.h"
 
 namespace pbrt {
 
@@ -88,7 +89,10 @@ void pbrtObjectEnd();
 void pbrtObjectInstance(const std::string &name);
 void pbrtWorldEnd();
 
-void pbrtRenderScene();
+bool pbrtRenderScene(
+    const lfrt::RayGenerator& raygen,
+    lfrt::SampleGenerator& sampleGen,
+    lfrt::SampleAccumulator& sampleAccum );
 
 void pbrtParseFile(std::string filename);
 void pbrtParseString(std::string str);
