@@ -9,10 +9,10 @@
 using namespace lfrt;
 
 
-void WriteImage( const SampleAccumulator* sampleAccum, const std::string& filepath )
+void WriteImage( const SampleAccumulator &sampleAccum, const std::string& filepath )
 {
-    const Int width  = sampleAccum->Width();
-    const Int height = sampleAccum->Height();
+    const Int width  = sampleAccum.Width();
+    const Int height = sampleAccum.Height();
     std::unique_ptr<Real[]> rgb(new Real[3 * width * height]);
     for (Int x = 0; x < width; ++x) {
         for (Int y = 0; y < height; ++y) {
@@ -20,7 +20,7 @@ void WriteImage( const SampleAccumulator* sampleAccum, const std::string& filepa
             Real& r = rgb[offset + 0];
             Real& g = rgb[offset + 1];
             Real& b = rgb[offset + 2];
-            sampleAccum->GetColor(x, y, r, g, b);
+            sampleAccum.GetColor(x, y, r, g, b);
         }
     }
     const pbrt::Point2i fullResolution( width, height );
@@ -44,13 +44,13 @@ int main( int argc, char *argv[] )
     const Int width = 800;
     const Int height = 600;
 
-    RayGenerator* raygen = raytracer->CreateDefaultRayGenerator( width, height );
-    SampleGenerator* sampleGen = raytracer->CreateDefaultSampleGenerator( width, height );
-    SampleAccumulator* sampleAccum = raytracer->CreateDefaultSampleAccumulator( width, height );
+    std::shared_ptr<const RayGenerator> raygen( raytracer->CreateDefaultRayGenerator( width, height ) );
+    std::shared_ptr<SampleGenerator> sampleGen( raytracer->CreateDefaultSampleGenerator( width, height ) );
+    std::shared_ptr<SampleAccumulator> sampleAccum( raytracer->CreateDefaultSampleAccumulator( width, height ) );
 
     raytracer->Render( *raygen, *sampleGen, *sampleAccum );
 
-    WriteImage( sampleAccum, "result.exr" );
+    WriteImage( *sampleAccum, "result.exr" );
 
     LFRayTRacerPBRTRelease();
 
