@@ -167,10 +167,13 @@ bool Film::GetColor( const int &x, const int &y, Float &r, Float &g, Float &b ) 
 }
 
 
-bool Film::Initialize( const ParamSet &params, std::unique_ptr<Filter> filt )
+bool Film::Initialize( const ParamSet &params, std::unique_ptr<Filter> filt,
+    const int width, const int height )
 {
-    int xres = params.FindOneInt("xresolution", 1280);
-    int yres = params.FindOneInt("yresolution", 720);
+    //int xres = params.FindOneInt("xresolution", 1280);
+    //int yres = params.FindOneInt("yresolution", 720);
+    int xres = width;
+    int yres = height;
     if (PbrtOptions.quickRender) xres = std::max(1, xres / 4);
     if (PbrtOptions.quickRender) yres = std::max(1, yres / 4);
     Bounds2f cropWindow;

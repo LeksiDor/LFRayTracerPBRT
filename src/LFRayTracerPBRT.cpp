@@ -93,7 +93,7 @@ public:
         }
         std::unique_ptr<Filter> filter = MakeFilter(options.FilterName, options.FilterParams);
         Film* film = new Film();
-        film->Initialize( options.FilmParams, std::move(filter) );
+        film->Initialize( options.FilmParams, std::move(filter), width, height );
 
         return film;
     }

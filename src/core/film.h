@@ -83,7 +83,8 @@ public:
         const int& x, const int& y,
         Float& r, Float& g, Float& b ) const override;
 
-    bool Initialize( const ParamSet &params, std::unique_ptr<Filter> filter );
+    bool Initialize( const ParamSet &params, std::unique_ptr<Filter> filter,
+        const int width, const int height );
 
     Bounds2f GetPhysicalExtent() const;
     void SetImage(const Spectrum *img) const;
