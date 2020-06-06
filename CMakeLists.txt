@@ -533,7 +533,8 @@ TARGET_COMPILE_FEATURES ( pbrt_exe PRIVATE ${PBRT_CXX11_FEATURES} )
 TARGET_LINK_LIBRARIES ( pbrt_exe ${ALL_PBRT_LIBS} )
 
 # LFRayTracer usage example.
-ADD_EXECUTABLE ( ExampleLFRayTracer src/example/example.cpp )
+file ( GLOB EXAMPLE_SOURCE_FILES "src/example/*.cpp" "src/example/*.h" )
+ADD_EXECUTABLE ( ExampleLFRayTracer ${EXAMPLE_SOURCE_FILES} )
 ADD_SANITIZERS ( ExampleLFRayTracer )
 
 SET_TARGET_PROPERTIES ( ExampleLFRayTracer PROPERTIES OUTPUT_NAME Example )

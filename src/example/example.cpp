@@ -6,6 +6,9 @@
 #include "imageio.h"
 
 
+#include "CustomFilm.h"
+
+
 using namespace lfrt;
 
 
@@ -46,7 +49,8 @@ int main( int argc, char *argv[] )
 
     std::shared_ptr<const RayGenerator> raygen( raytracer->CreateDefaultRayGenerator( width, height ) );
     std::shared_ptr<SampleGenerator> sampleGen( raytracer->CreateDefaultSampleGenerator( width, height ) );
-    std::shared_ptr<SampleAccumulator> sampleAccum( raytracer->CreateDefaultSampleAccumulator( width, height ) );
+    //std::shared_ptr<SampleAccumulator> sampleAccum( raytracer->CreateDefaultSampleAccumulator( width, height ) );
+    std::shared_ptr<SampleAccumulator> sampleAccum( new CustomFilm( width, height ) );
 
     raytracer->Render( *raygen, *sampleGen, *sampleAccum );
 
