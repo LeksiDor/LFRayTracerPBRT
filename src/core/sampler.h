@@ -56,6 +56,7 @@ class Sampler {
     virtual Float Get1D() = 0;
     virtual Point2f Get2D() = 0;
     virtual CameraSample GetCameraSample(const Point2i &pRaster);
+    virtual Float CameraSampleWeight() { return 1.0; }
     void Request1DArray(int n);
     void Request2DArray(int n);
     virtual int RoundCount(int n) const { return n; }
@@ -76,7 +77,7 @@ class Sampler {
     // Sampler Protected Data
     Point2i currentPixel;
     int64_t currentPixelSampleIndex;
-    const int64_t samplesPerPixel;
+    int64_t samplesPerPixel;
     std::vector<int> samples1DArraySizes, samples2DArraySizes;
     std::vector<std::vector<Float>> sampleArray1D;
     std::vector<std::vector<Point2f>> sampleArray2D;

@@ -47,8 +47,10 @@ public:
     virtual bool ResetPixel( const Int& x, const Int& y ) = 0;
 	// Number of samples for currently set pixel.
 	virtual Int NumSamplesInPixel() = 0;
+	// Retrieve data for the current sample.
+    virtual bool CurrentSample( Real& weight, VEC2& raster, VEC2& secondary, Real& time ) = 0;
 	// Move to the next sample for current pixel. True on success; False if this sample was the last one.
-	virtual bool NextSample( Real& weight, VEC2& raster, VEC2& secondary, Real& time ) = 0;
+	virtual bool MoveToNextSample() = 0;
 };
 
 

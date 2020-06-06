@@ -150,11 +150,15 @@ bool DefaultSampleGenerator::ResetPixel( const Int& x, const Int& y )
 
 Int DefaultSampleGenerator::NumSamplesInPixel()
 {
-    return Int();
+    return Int(); }
+
+bool DefaultSampleGenerator::CurrentSample(Real& weight, VEC2& raster,
+                                           VEC2& secondary, Real& time) {
+    return false;
 }
 
 
-bool DefaultSampleGenerator::NextSample( Real& weight, VEC2& raster, VEC2& secondary, Real& time )
+bool DefaultSampleGenerator::MoveToNextSample()
 {
     return false;
 }

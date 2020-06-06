@@ -279,8 +279,8 @@ void SamplerIntegrator::Render(const Scene &scene) {
 
                 do {
                     // Initialize _CameraSample_ for current sample
-                    CameraSample cameraSample =
-                        tileSampler->GetCameraSample(pixel);
+                    CameraSample cameraSample = tileSampler->GetCameraSample(pixel);
+                    const Float sampleWeight = tileSampler->CameraSampleWeight();
 
                     // Generate camera ray for current sample
                     RayDifferential ray;
@@ -325,7 +325,7 @@ void SamplerIntegrator::Render(const Scene &scene) {
                     // Add camera ray's contribution to image
                     const lfrt::VEC2 raster = { cameraSample.pFilm.x, cameraSample.pFilm.y };
                     const lfrt::VEC2 auxcoord = { cameraSample.pLens.x, cameraSample.pLens.y };
-                    filmTile->AddSample( raster, auxcoord, 1.0, rayWeight, rgb[0], rgb[1], rgb[2], true );
+                    filmTile->AddSample( raster, auxcoord, sampleWeight, rayWeight, rgb[0], rgb[1], rgb[2], true );
 
                     // Free _MemoryArena_ memory from computing image sample
                     // value
