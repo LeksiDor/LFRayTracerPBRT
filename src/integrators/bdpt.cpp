@@ -79,7 +79,7 @@ int GenerateCameraSubpath(const Scene &scene, Sampler &sampler,
     cameraSample.pLens = sampler.Get2D();
     RayDifferential ray;
     Spectrum beta = camera.GenerateRayDifferential(cameraSample, &ray);
-    ray.ScaleDifferentials(1 / std::sqrt(sampler.samplesPerPixel));
+    ray.ScaleDifferentials(1 / std::sqrt(sampler.NumberOfSamplesInPixel()));
 
     // Generate first vertex on camera subpath and start random walk
     Float pdfPos, pdfDir;

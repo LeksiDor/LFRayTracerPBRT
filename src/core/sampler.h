@@ -70,13 +70,13 @@ class Sampler {
     }
     int64_t CurrentSampleNumber() const { return currentPixelSampleIndex; }
 
-    // Sampler Public Data
-    const int64_t samplesPerPixel;
+    virtual int64_t NumberOfSamplesInPixel() const { return samplesPerPixel; }
 
   protected:
     // Sampler Protected Data
     Point2i currentPixel;
     int64_t currentPixelSampleIndex;
+    const int64_t samplesPerPixel;
     std::vector<int> samples1DArraySizes, samples2DArraySizes;
     std::vector<std::vector<Float>> sampleArray1D;
     std::vector<std::vector<Point2f>> sampleArray2D;
