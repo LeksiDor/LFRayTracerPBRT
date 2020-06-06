@@ -22,6 +22,7 @@ class DefaultSampleGenerator : public SampleGenerator
 public:
     virtual SampleGenerator* Clone() const override;
     virtual bool ResetPixel( const Int& x, const Int& y ) override;
+    virtual Int NumSamplesInPixel() override;
     virtual bool NextSample( Real& weight, VEC2& raster, VEC2& secondary, Real& time ) override;
 };
 
