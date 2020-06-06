@@ -117,6 +117,7 @@
 
 #include "LFRayTracerPBRT.h"
 #include "cameras/lfcamera.h"
+#include "samplers/lfsampler.h"
 
 
 namespace pbrt {
@@ -827,7 +828,7 @@ std::shared_ptr<Sampler> MakeSampler(
     }
     else
     {
-        // ToDo: user-defined SampleGenerator.
+        sampler = CreateLFSampler( sampleGen );
     }
     
     return std::shared_ptr<Sampler>(sampler);
