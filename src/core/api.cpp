@@ -116,6 +116,7 @@
 #include <stdio.h>
 
 #include "LFRayTracerPBRT.h"
+#include "cameras/lfcamera.h"
 
 
 namespace pbrt {
@@ -781,7 +782,9 @@ Camera *MakeCamera(
     }
     else
     {
-        // ToDo: user-defined camera.
+        camera = CreateLFCamera( paramSet, animatedCam2World, film, mediumInterface.outside, raygen );
+        if ( camera == nullptr )
+            Error( "Created user-defined camera is nullptr." );
     }
 
     paramSet.ReportUnused();

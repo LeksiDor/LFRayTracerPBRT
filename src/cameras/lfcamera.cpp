@@ -18,10 +18,10 @@ LFCamera::LFCamera(
     const AnimatedTransform& CameraToWorld,
     Float shutterOpen,
     Float shutterClose,
-    Film* film,
+    lfrt::SampleAccumulator* film,
     const Medium* medium,
     const Float& scale,
-    lfrt::RayGenerator* raygen )
+    const lfrt::RayGenerator* raygen )
     :Camera( CameraToWorld, shutterOpen, shutterClose, film, medium )
     ,Scale(scale)
     ,RayGen(raygen)
@@ -116,10 +116,13 @@ Float LFCamera::GenerateRayDifferential( const CameraSample& sample, RayDifferen
 LFCamera* CreateLFCamera(
     const ParamSet& params,
     const AnimatedTransform& cam2world,
-    Film* film,
-    const Medium* medium, const std::string& mode,
-    lfrt::RayGenerator* raygen )
+    lfrt::SampleAccumulator* film,
+    const Medium* medium,
+    const lfrt::RayGenerator* raygen )
 {
+    if ( raygen == nullptr )
+        return nullptr;
+
     // Extract common camera parameters from _ParamSet_
     Float shutteropen = params.FindOneFloat( "shutteropen", 0 );
     Float shutterclose = params.FindOneFloat( "shutterclose", 1 );

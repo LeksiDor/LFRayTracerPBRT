@@ -14,6 +14,7 @@
 
 
 namespace lfrt { class RayGenerator; }
+namespace lfrt { class SampleAccumulator; }
 
 
 namespace pbrt
@@ -27,10 +28,10 @@ public:
         const AnimatedTransform& CameraToWorld,
         Float shutterOpen,
         Float shutterClose,
-        Film* film,
+        lfrt::SampleAccumulator* film,
         const Medium* medium,
         const Float& scale,
-        lfrt::RayGenerator* raygen = nullptr );
+        const lfrt::RayGenerator* raygen );
 
       virtual ~LFCamera();
 
@@ -44,16 +45,15 @@ public:
 
 public:
     Float Scale = 1.0;
-    lfrt::RayGenerator* RayGen = nullptr;
+    const lfrt::RayGenerator* RayGen = nullptr;
 };
 
 LFCamera* CreateLFCamera(
     const ParamSet& params,
     const AnimatedTransform& cam2world,
-    Film* film,
+    lfrt::SampleAccumulator* film,
     const Medium* medium,
-    const std::string& mode,
-    lfrt::RayGenerator* raygen = nullptr );
+    const lfrt::RayGenerator* raygen );
 
 }  // namespace pbrt
 
