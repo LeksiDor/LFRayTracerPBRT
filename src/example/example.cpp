@@ -7,6 +7,7 @@
 
 
 #include "CustomFilm.h"
+#include "CustomRayGen.h"
 
 
 using namespace lfrt;
@@ -47,8 +48,13 @@ int main( int argc, char *argv[] )
     const Int width = 800;
     const Int height = 600;
 
-    std::shared_ptr<const RayGenerator> raygen( raytracer->CreateDefaultRayGenerator( width, height ) );
+    const Real ratio = Real(width) / Real(height);
+
+    //std::shared_ptr<const RayGenerator> raygen( raytracer->CreateDefaultRayGenerator( width, height ) );
+    std::shared_ptr<const RayGenerator> raygen( new CustomRayGen( width, height, { 1.0, 1.0/ratio } ) );
+
     std::shared_ptr<SampleGenerator> sampleGen( raytracer->CreateDefaultSampleGenerator( width, height ) );
+
     //std::shared_ptr<SampleAccumulator> sampleAccum( raytracer->CreateDefaultSampleAccumulator( width, height ) );
     std::shared_ptr<SampleAccumulator> sampleAccum( new CustomFilm( width, height ) );
 
