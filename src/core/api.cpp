@@ -131,7 +131,7 @@ struct RenderData {
     // RenderData Public Methods
     Integrator *MakeIntegrator(
         const lfrt::RayGenerator& raygen,
-        lfrt::SampleGenerator& sampleGen,
+        const lfrt::SampleGenerator& sampleGen,
         lfrt::SampleAccumulator& sampleAccum ) const;
     Scene *MakeScene();
 
@@ -793,26 +793,43 @@ Camera *MakeCamera(
 
 std::shared_ptr<Sampler> MakeSampler(
     const std::string &name, const ParamSet &paramSet,
+    const lfrt::SampleGenerator* sampleGen,
     const lfrt::SampleAccumulator *film )
 {
     Sampler *sampler = nullptr;
-    Bounds2i bounds;
-    film->GetSamplingBounds( bounds.pMin.x, bounds.pMin.y, bounds.pMax.x, bounds.pMax.y );
-    if (name == "lowdiscrepancy" || name == "02sequence")
-        sampler = CreateZeroTwoSequenceSampler(paramSet);
-    else if (name == "maxmindist")
-        sampler = CreateMaxMinDistSampler(paramSet);
-    else if (name == "halton")
-        sampler = CreateHaltonSampler( paramSet, bounds );
-    else if (name == "sobol")
-        sampler = CreateSobolSampler( paramSet, bounds );
-    else if (name == "random")
-        sampler = CreateRandomSampler(paramSet);
-    else if (name == "stratified")
-        sampler = CreateStratifiedSampler(paramSet);
+
+    const lfrt::DefaultSampleGenerator *defaultSampleGen =
+        dynamic_cast<const lfrt::DefaultSampleGenerator*>(sampleGen);
+
+    if ( defaultSampleGen != nullptr )
+    {
+        Bounds2i bounds;
+        film->GetSamplingBounds( bounds.pMin.x, bounds.pMin.y, bounds.pMax.x, bounds.pMax.y );
+        if (name == "lowdiscrepancy" || name == "02sequence")
+            sampler = CreateZeroTwoSequenceSampler(paramSet);
+        else if (name == "maxmindist")
+            sampler = CreateMaxMinDistSampler(paramSet);
+        else if (name == "halton")
+            sampler = CreateHaltonSampler( paramSet, bounds );
+        else if (name == "sobol")
+            sampler = CreateSobolSampler( paramSet, bounds );
+        else if (name == "random")
+            sampler = CreateRandomSampler(paramSet);
+        else if (name == "stratified")
+            sampler = CreateStratifiedSampler(paramSet);
+        else
+            Warning("Sampler \"%s\" unknown.", name.c_str());
+        paramSet.ReportUnused();
+    }
+    else if ( sampleGen == nullptr )
+    {
+        Error( "SampleGenerator object is nullptr." );
+    }
     else
-        Warning("Sampler \"%s\" unknown.", name.c_str());
-    paramSet.ReportUnused();
+    {
+        // ToDo: user-defined SampleGenerator.
+    }
+    
     return std::shared_ptr<Sampler>(sampler);
 }
 
@@ -1556,7 +1573,7 @@ void pbrtWorldEnd() {
 
 bool pbrtRenderScene(
     const lfrt::RayGenerator &raygen,
-    lfrt::SampleGenerator &sampleGen,
+    const lfrt::SampleGenerator &sampleGen,
     lfrt::SampleAccumulator &sampleAccum )
 {
     // Create scene and render
@@ -1624,7 +1641,7 @@ Scene *RenderData::MakeScene() {
 
 Integrator *RenderData::MakeIntegrator(
     const lfrt::RayGenerator &raygen,
-    lfrt::SampleGenerator &sampleGen,
+    const lfrt::SampleGenerator &sampleGen,
     lfrt::SampleAccumulator &sampleAccum ) const
 {
     const RenderOptions &options = theRenderOptions();
@@ -1641,6 +1658,7 @@ Integrator *RenderData::MakeIntegrator(
     std::shared_ptr<Sampler> sampler = MakeSampler(
         theRenderOptions().SamplerName,
         theRenderOptions().SamplerParams,
+        &sampleGen,
         camera->film );
     if (!sampler) {
         Error("Unable to create sampler.");

@@ -148,7 +148,7 @@ public:
 	virtual RayGenerator* CreateDefaultRayGenerator( const Int& width, const Int& height ) const = 0;
 	virtual SampleGenerator* CreateDefaultSampleGenerator( const Int& width, const Int& height ) const = 0;
 	virtual SampleAccumulator* CreateDefaultSampleAccumulator( const Int& width, const Int& height ) const = 0;
-	virtual bool Render( const RayGenerator& raygen, SampleGenerator& sampleGen, SampleAccumulator& sampleAccum ) const = 0;
+	virtual bool Render( const RayGenerator& raygen, const SampleGenerator& sampleGen, SampleAccumulator& sampleAccum ) const = 0;
 };
 
 

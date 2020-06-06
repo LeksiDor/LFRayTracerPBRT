@@ -98,7 +98,7 @@ public:
         return film;
     }
 
-    virtual bool Render( const RayGenerator& raygen, SampleGenerator& sampleGen,
+    virtual bool Render( const RayGenerator& raygen, const SampleGenerator& sampleGen,
                         SampleAccumulator& sampleAccum ) const override
     {
         return pbrtRenderScene( raygen, sampleGen, sampleAccum );

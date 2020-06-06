@@ -91,7 +91,7 @@ void pbrtWorldEnd();
 
 bool pbrtRenderScene(
     const lfrt::RayGenerator& raygen,
-    lfrt::SampleGenerator& sampleGen,
+    const lfrt::SampleGenerator& sampleGen,
     lfrt::SampleAccumulator& sampleAccum );
 
 void pbrtParseFile(std::string filename);
