@@ -115,6 +115,9 @@
 #include <map>
 #include <stdio.h>
 
+#include "LFRayTracerPBRT.h"
+
+
 namespace pbrt {
 
 // API Global Variables
@@ -125,9 +128,11 @@ Options PbrtOptions;
 
 struct RenderData {
     // RenderData Public Methods
-    Integrator *MakeIntegrator( lfrt::SampleAccumulator &sampleAccum ) const;
+    Integrator *MakeIntegrator(
+        const lfrt::RayGenerator& raygen,
+        lfrt::SampleGenerator& sampleGen,
+        lfrt::SampleAccumulator& sampleAccum ) const;
     Scene *MakeScene();
-    //Camera *MakeCamera() const;
 
     // RenderData Public Data
     std::map<std::string, std::shared_ptr<Medium>> namedMedia;
@@ -741,7 +746,9 @@ std::shared_ptr<Primitive> MakeAccelerator(
 Camera *MakeCamera(
     const std::string &name, const ParamSet &paramSet,
     const TransformSet &cam2worldSet, Float transformStart, Float transformEnd,
-    lfrt::SampleAccumulator *film ) {
+    const lfrt::RayGenerator *raygen,
+    lfrt::SampleAccumulator *film )
+{
     Camera *camera = nullptr;
     MediumInterface mediumInterface = graphicsState.CreateMediumInterface();
     static_assert(MaxTransforms == 2,
@@ -752,20 +759,31 @@ Camera *MakeCamera(
     };
     AnimatedTransform animatedCam2World(cam2world[0], transformStart,
                                         cam2world[1], transformEnd);
-    if (name == "perspective")
-        camera = CreatePerspectiveCamera(paramSet, animatedCam2World, film,
-                                         mediumInterface.outside);
-    else if (name == "orthographic")
-        camera = CreateOrthographicCamera(paramSet, animatedCam2World, film,
-                                          mediumInterface.outside);
-    else if (name == "realistic")
-        camera = CreateRealisticCamera(paramSet, animatedCam2World, film,
-                                       mediumInterface.outside);
-    else if (name == "environment")
-        camera = CreateEnvironmentCamera(paramSet, animatedCam2World, film,
-                                         mediumInterface.outside);
+
+    const lfrt::DefaultRayGenerator *defaultRayGen =
+        dynamic_cast<const lfrt::DefaultRayGenerator*>( raygen );
+    if ( defaultRayGen != nullptr )
+    {
+        if (name == "perspective")
+            camera = CreatePerspectiveCamera( paramSet, animatedCam2World, film, mediumInterface.outside );
+        else if (name == "orthographic")
+            camera = CreateOrthographicCamera( paramSet, animatedCam2World, film, mediumInterface.outside );
+        else if (name == "realistic")
+            camera = CreateRealisticCamera( paramSet, animatedCam2World, film, mediumInterface.outside );
+        else if (name == "environment")
+            camera = CreateEnvironmentCamera( paramSet, animatedCam2World, film, mediumInterface.outside );
+        else
+           Warning("Camera \"%s\" unknown.", name.c_str());
+    }
+    else if ( raygen == nullptr )
+    {
+        Error( "RayGenerator object is nullptr." );
+    }
     else
-        Warning("Camera \"%s\" unknown.", name.c_str());
+    {
+        // ToDo: user-defined camera.
+    }
+
     paramSet.ReportUnused();
     return camera;
 }
@@ -1543,7 +1561,7 @@ bool pbrtRenderScene(
         printf("%*sWorldEnd\n", catIndentCount, "");
     } else {
         std::unique_ptr<Integrator> integrator(
-            renderData->MakeIntegrator( sampleAccum ) );
+            renderData->MakeIntegrator( raygen, sampleGen, sampleAccum ) );
         std::unique_ptr<Scene> scene(renderData->MakeScene());
 
         // This is kind of ugly; we directly override the current profiler
@@ -1601,12 +1619,16 @@ Scene *RenderData::MakeScene() {
     return scene;
 }
 
-Integrator *RenderData::MakeIntegrator( lfrt::SampleAccumulator &sampleAccum ) const
+Integrator *RenderData::MakeIntegrator(
+    const lfrt::RayGenerator &raygen,
+    lfrt::SampleGenerator &sampleGen,
+    lfrt::SampleAccumulator &sampleAccum ) const
 {
     const RenderOptions &options = theRenderOptions();
     std::shared_ptr<const Camera> camera( MakeCamera(
         options.CameraName, options.CameraParams, options.CameraToWorld,
-        options.transformStartTime, options.transformEndTime, &sampleAccum ) );
+        options.transformStartTime, options.transformEndTime,
+        &raygen, &sampleAccum ) );
 
     if (!camera) {
         Error("Unable to create camera");
