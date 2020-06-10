@@ -51,8 +51,6 @@ class LFRayTracerPBRTImpl : public LFRayTracer
 public:
     LFRayTracerPBRTImpl()
     {
-        google::InitGoogleLogging(""); // To actually enable this, call it from main.cpp with 'argv[0]' argument.
-        FLAGS_stderrthreshold = 1;  // Warning and above.
         Options options;
         pbrtInit( options );
     }
@@ -87,7 +85,8 @@ public:
         const Int& width, const Int& height ) const override
     {
         const RenderOptions& options = theRenderOptions();
-        if (options.FilmName != "image") {
+        if (options.FilmName != "image")
+        {
             Error("Unable to create film.");
             return nullptr;
         }
@@ -117,6 +116,8 @@ LFRayTracer* LFRayTracerPBRTInstance()
 {
     if ( raytracerInstance == nullptr )
     {
+        google::InitGoogleLogging(""); // To actually enable this, call it from main.cpp with 'argv[0]' argument.
+        FLAGS_stderrthreshold = 1;  // Warning and above.
         raytracerInstance = std::make_shared<LFRayTracerPBRTImpl>();
     }
     return raytracerInstance.get();
@@ -150,10 +151,11 @@ bool DefaultSampleGenerator::ResetPixel( const Int& x, const Int& y )
 
 Int DefaultSampleGenerator::NumSamplesInPixel()
 {
-    return Int(); }
+    return Int();
+}
 
-bool DefaultSampleGenerator::CurrentSample(Real& weight, VEC2& raster,
-                                           VEC2& secondary, Real& time) {
+bool DefaultSampleGenerator::CurrentSample( Real& weight, VEC2& raster, VEC2& secondary, Real& time )
+{
     return false;
 }
 
@@ -162,5 +164,6 @@ bool DefaultSampleGenerator::MoveToNextSample()
 {
     return false;
 }
+
 
 }  // namespace lfrt

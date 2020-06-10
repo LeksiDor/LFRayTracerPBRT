@@ -34,17 +34,11 @@ void WriteImage( const SampleAccumulator &sampleAccum, const std::string& filepa
 }
 
 
-int main( int argc, char *argv[] )
+void RunTest( const std::string& scene_filepath, const std::string& save_filepath )
 {
-    if ( argc != 2 )
-    {
-        std::cout << "You should pass filepath as the argument, nothing more, nothing less." << std::endl;
-        return 1;
-    }
-
     LFRayTracer* raytracer = LFRayTracerPBRTInstance();
 
-    raytracer->LoadScene( argv[1] );
+    raytracer->LoadScene( scene_filepath );
 
     const Int width = 800;
     const Int height = 600;
@@ -62,7 +56,21 @@ int main( int argc, char *argv[] )
 
     raytracer->Render( *raygen, *sampleGen, *sampleAccum );
 
-    WriteImage( *sampleAccum, "result.exr" );
+    WriteImage( *sampleAccum, save_filepath );
+}
+
+
+int main( int argc, char *argv[] )
+{
+    if ( argc != 2 )
+    {
+        std::cout << "You should pass filepath as the argument, nothing more, nothing less." << std::endl;
+        return 1;
+    }
+
+    RunTest( argv[1], "resultA.exr" );
+    RunTest( argv[1], "resultB.exr" );
+    RunTest( argv[1], "resultC.exr" );
 
     LFRayTRacerPBRTRelease();
 
