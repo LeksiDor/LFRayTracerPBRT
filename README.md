@@ -30,3 +30,22 @@ Supporting it for other platforms is currently not a priority for the author, bu
 
 The building process itself is typical for CMake-based projects.
 Probably, the only extra variable you should put attention to is `PBRT_FLOAT_AS_DOUBLE`, which determines what Real type is used (true for double, false for float).
+
+
+
+How to use
+-------------
+
+Original PBRT-v3 renderer is kept in pbrt_exe target.
+Example of usage LFRayTracer-based implementation is found in ExampleLFRayTracer target.
+
+When you use the library in your custom project, you can call LFRayTracerPBRTInstance() to access the singleton LFRayTracer instance.
+First, you should load a scene by calling LoadScene(filepath) method of LFRayTracer.
+Then, you create three user-defined classes: RayGenerator, SampleGenerator, and SampleAccumulator.
+If you don't want to create them, you can call CreateDefaultXXX method of LFRayTracer, which will return the corresponding PBRT-v3 analogue.
+After you specified RayGenerator, SampleGenerator, and SampleAccumulator, you can call Render method.
+Now it is completely up to you how to use the rendered result: no default write-to-file is provided, but you can easily do it, or show image to the screen if you like.
+
+If you want to re-use the same scene with all PBRT-related rendering options, you can just modify RayGenerator, SampleGenerator, and/or SampleAccumulator, and then call Render method once again.
+Alternatively, you can load another scene through LoadScene method, and do all the things you desire.
+Finally, you should call LFRayTRacerPBRTRelease() method when you are done (please do it, but only once).
