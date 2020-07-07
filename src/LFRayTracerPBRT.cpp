@@ -65,6 +65,7 @@ public:
 
     virtual bool LoadScene( const std::string& filepath ) override
     {
+        pbrtCleanUpScene();
         pbrtParseFile( filepath );
         return true;
     }
@@ -126,6 +127,7 @@ LFRayTracer* LFRayTracerPBRTInstance()
 
 bool LFRayTRacerPBRTRelease()
 {
+    pbrtCleanUpScene();
     raytracerInstance = nullptr;
     return true;
 }

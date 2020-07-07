@@ -94,6 +94,8 @@ bool pbrtRenderScene(
     const lfrt::SampleGenerator& sampleGen,
     lfrt::SampleAccumulator& sampleAccum );
 
+void pbrtCleanUpScene();
+
 void pbrtParseFile(std::string filename);
 void pbrtParseString(std::string str);
 

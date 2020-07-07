@@ -34,12 +34,8 @@ void WriteImage( const SampleAccumulator &sampleAccum, const std::string& filepa
 }
 
 
-void RunTest( const std::string& scene_filepath, const std::string& save_filepath )
+void RunTest()
 {
-    LFRayTracer* raytracer = LFRayTracerPBRTInstance();
-
-    raytracer->LoadScene( scene_filepath );
-
     const Int width = 800;
     const Int height = 600;
 
@@ -54,9 +50,17 @@ void RunTest( const std::string& scene_filepath, const std::string& save_filepat
     //std::shared_ptr<SampleAccumulator> sampleAccum( raytracer->CreateDefaultSampleAccumulator( width, height ) );
     std::shared_ptr<SampleAccumulator> sampleAccum( new CustomFilm( width, height ) );
 
-    raytracer->Render( *raygen, *sampleGen, *sampleAccum );
 
-    WriteImage( *sampleAccum, save_filepath );
+    LFRayTracerPBRTInstance()->Render( *raygen, *sampleGen, *sampleAccum );
+    WriteImage( *sampleAccum, "resultA.exr" );
+
+    raygen.reset( new CustomRayGen( width, height, { 1.0, 1.0/ratio }, 0.5 ) );
+    LFRayTracerPBRTInstance()->Render( *raygen, *sampleGen, *sampleAccum );
+    WriteImage( *sampleAccum, "resultB.exr" );
+
+    raygen.reset( new CustomRayGen( width, height, { 1.0, 1.0/ratio }, 2.0 ) );
+    LFRayTracerPBRTInstance()->Render( *raygen, *sampleGen, *sampleAccum );
+    WriteImage( *sampleAccum, "resultC.exr" );
 }
 
 
@@ -68,9 +72,9 @@ int main( int argc, char *argv[] )
         return 1;
     }
 
-    RunTest( argv[1], "resultA.exr" );
-    RunTest( argv[1], "resultB.exr" );
-    RunTest( argv[1], "resultC.exr" );
+    LFRayTracerPBRTInstance()->LoadScene( argv[1] );
+
+    RunTest();
 
     LFRayTRacerPBRTRelease();
 

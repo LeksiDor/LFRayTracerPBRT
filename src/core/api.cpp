@@ -143,6 +143,9 @@ struct RenderData {
     std::map<std::string, std::vector<std::shared_ptr<Primitive>>> instances;
     std::vector<std::shared_ptr<Primitive>> *currentInstance = nullptr;
     bool haveScatteringMedia = false;
+
+    bool isSceneReady = false;
+    std::shared_ptr<Scene> scene;
 };
 
 // MaterialInstance represents both an instance of a material as well as
@@ -861,6 +864,7 @@ void pbrtCleanup() {
     else if (currentApiState == APIState::WorldBlock)
         Error("pbrtCleanup() called while inside world block.");
     currentApiState = APIState::Uninitialized;
+    renderData.reset(new RenderData);
     ParallelCleanup();
     CleanupProfiler();
 }
@@ -1087,6 +1091,7 @@ void pbrtMediumInterface(const std::string &insideName,
 void pbrtWorldBegin() {
     VERIFY_OPTIONS("WorldBegin");
     currentApiState = APIState::WorldBlock;
+    //renderData.reset(new RenderData);
     for (int i = 0; i < MaxTransforms; ++i) curTransform[i] = Transform();
     activeTransformBits = AllTransformsBits;
     namedCoordinateSystems["world"] = curTransform;
@@ -1583,7 +1588,12 @@ bool pbrtRenderScene(
     } else {
         std::unique_ptr<Integrator> integrator(
             renderData->MakeIntegrator( raygen, sampleGen, sampleAccum ) );
-        std::unique_ptr<Scene> scene(renderData->MakeScene());
+
+        if ( !renderData->isSceneReady ) {
+            renderData->scene = std::shared_ptr<Scene>( renderData->MakeScene() );
+            renderData->isSceneReady = true;
+        }
+        std::shared_ptr<Scene> scene = renderData->scene;
 
         // This is kind of ugly; we directly override the current profiler
         // state to switch from parsing/scene construction related stuff to
@@ -1600,6 +1610,13 @@ bool pbrtRenderScene(
         ProfilerState = ProfToBits(Prof::SceneConstruction);
     }
 
+    // Removed code: pbrtCleanUpScene().
+
+    return true;
+}
+
+
+void pbrtCleanUpScene() {
     // Clean up after rendering. Do this before reporting stats so that
     // destructors can run and update stats as needed.
     graphicsState = GraphicsState();
@@ -1623,7 +1640,6 @@ bool pbrtRenderScene(
     activeTransformBits = AllTransformsBits;
     namedCoordinateSystems.erase(namedCoordinateSystems.begin(),
                                  namedCoordinateSystems.end());
-    return true;
 }
 
 
@@ -1702,7 +1718,7 @@ Integrator *RenderData::MakeIntegrator(
 
     IntegratorParams.ReportUnused();
     // Warn if no light sources are defined
-    if (lights.empty())
+    if ( !isSceneReady && lights.empty() )
         Warning(
             "No light sources defined in scene; "
             "rendering a black image.");
